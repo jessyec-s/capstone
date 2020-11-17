@@ -55,8 +55,8 @@ def reinforcementAlg(env, alpha, gamma, episodes):
 
             epochs += 1
         # just for debug purposes
-        # print('episode: ',i,"epochs: ",epochs, 'penalties: ',penalties)
-        # if i is 10 or i is 100 or i is 450:
+        print('episode: ',i,"epochs: ",epochs, 'penalties: ',penalties)
+        # if i == 400:
             # print_frames(frames)
         tot_penalties.append(penalties)
         tot_epochs.append(epochs)
@@ -75,13 +75,13 @@ def plot_error_drop(tot_penalties, tot_epochs):
 
 #calling function
 def taxi_render():
-    env = gym.make("Taxi-v3").env
+    env = gym.make("CartPole-v0").env
     env.render()
-
+    print(env.observation_space.high,env.observation_space.low)
     alpha = .9
     gamma = .1
-    episodes = 500
-
-    tot_penalties, tot_epochs = reinforcementAlg(env, alpha, gamma, episodes)
-    plot_error_drop(tot_penalties, tot_epochs)
+    episodes = 1
+    # djh
+    # tot_penalties, tot_epochs = reinforcementAlg(env, alpha, gamma, episodes)
+    # plot_error_drop(tot_penalties, tot_epochs)
 
