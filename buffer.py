@@ -1,6 +1,3 @@
-import webcamcontrol as wcc
-import taxirender
-import caridentifier as ci
 import gym
 import numpy as np
 class ReplayBuffer():
@@ -38,25 +35,3 @@ class ReplayBuffer():
         dones=self.terminal_memory[batch]
 
         return states, actions, rewards, states_, dones
-def main():
-    # wcc.display_feed()
-    # taxirender.taxi_render()
-    # ci.car_identifier()
-
-    env = gym.make("Pendulum-v0")
-    state=env.reset()
-    cumulative_reward=0
-    frames=[]
-    episodes=1000
-    for i_episode in range(episodes):
-        observation = env.reset()
-        for t in range(100):
-            # env.render()
-            # print(observation)
-            action=env.action_space.sample()
-            observation,reward,done,info = env.step(action)
-            if done:
-                break
-        print("Episode finished after {} timestaps".format(t + 1))
-    env.close()
-# main()

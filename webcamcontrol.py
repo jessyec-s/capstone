@@ -1,5 +1,6 @@
 import cv2
-
+def identify_edges(img):
+    pass
 def identify_object(img):
     img_hsv=cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
@@ -8,7 +9,7 @@ def identify_object(img):
 
     mask=cv2.bitwise_or(mask1,mask2)
     cropped=cv2.bitwise_and(img,img,mask=mask)
-    return mask,cropped
+    return cropped
 
 def display_feed():
     cv2.namedWindow("preview")
@@ -20,12 +21,12 @@ def display_feed():
         rval=false
 
     while rval:
-        mask,cropped=identify_object(frame)
+        cropped=identify_object(frame)
         cv2.imshow("preview",frame)
         cv2.imshow("cropped",cropped)
         rval,frame =vid_capture.read()
         key = cv2.waitKey(20)
         if key == 27: # exit on esc
             break
-    cv2.destroyWindow("preview")
-    cv2.destroyWindow("cropped")
+
+    cv2.destroyAllWindows()

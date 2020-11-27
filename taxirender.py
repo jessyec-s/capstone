@@ -63,15 +63,6 @@ def reinforcementAlg(env, alpha, gamma, episodes):
 
     return tot_penalties, tot_epochs
 
-#plot
-def plot_error_drop(tot_penalties, tot_epochs):
-    line1 = mpl.plot(np.arange(0, len(tot_penalties)), tot_penalties, 'b', label="penalties")
-    line2 = mpl.plot(np.arange(0, len(tot_epochs)), tot_epochs, 'r', label='epochs')
-    mpl.ylabel("final value")
-    mpl.xlabel("episode")
-    mpl.title("error drop over time")
-    mpl.legend(loc="upper right")
-    mpl.show()
 
 #calling function
 def taxi_render():
