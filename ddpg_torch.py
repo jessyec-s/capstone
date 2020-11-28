@@ -8,8 +8,13 @@ from network import ActorNetwork, CriticNetwork,ValueNetwork
 class Agent():
     def __init__(self,alpha=0.0003,beta=.0003,input_dims=[8],env=None, gamma=.99,n_actions=2,
                  max_size=1000000,layer1_size=256,layer2_size=256,tau=.005,batch_size=256,reward_scale=2):
-        # reward scales  depends on action convention for the environment
-        pass
+        # reward scales  depends on action convention for the environment\
+        self.memory=ReplayBuffer()
+        self.actor=ActorNetwork()
+        self.critic=CriticNetwork()
+        self.target_actor=ActorNetwork()
+        self.target_critic=CriticNetwork()
+
     def choose_action(self,observation):
         # here we turn into a tensor
         pass
