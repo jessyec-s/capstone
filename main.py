@@ -16,7 +16,7 @@ def main():
 
     load_checkpoint= False
 
-    env=gym.make("CartPole-v1")
+    env=gym.make("CartPoleContinuousBulletEnv-v0")
 
     agent = Agent(input_dims=env.observation_space.shape[0],n_actions=env.action_space.shape[0])
     episodes = 250
