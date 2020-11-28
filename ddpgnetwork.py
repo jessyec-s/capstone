@@ -21,17 +21,18 @@ class CriticNetwork(nn.Module):
         # save parameters
         self.name=name
         self.critic_learning_rate=critic_learning_rate
-        self.chkpt_dir=chkpt_dir
+        self.checkpoint_dir=chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name + '_ddpg')
 
-        self.fc1 = nn.Linear(input_dims,fc1_dims)
+        self.fc1_dims=fc1_dims
+        self.fc2_dims=fc2_dims
+        self.fc1 = nn.Linear(*input_dims,fc1_dims)
         self.fc2 = nn.Linear(fc1_dims+n_actions,fc2_dims)
         self.fc3 = nn.Linear(fc2_dims,1)
 
         self.bn1 = nn.LayerNorm(fc1_dims)
         self.bn2 = nn.LayerNorm(fc2_dims)
 
-        self.relu = nn.ReLu()
         self.init_weights(init_w)
 
         # this is about setting device to
@@ -46,10 +47,10 @@ class CriticNetwork(nn.Module):
     def forward(self,state,action):
         # propagate action value through the neural network
         out = self.fc1(state)
-        out = self.relu(out)
+        out = F.relu(out)
         out = self.bn1(out)
         out = self.fc2(T.cat([out,action],1))
-        out = self.relu(out)
+        out = F.relu(out)
         q_val = self.fc3(out)
         return q_val
 
@@ -59,22 +60,23 @@ class CriticNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class ActorNetwork(nn.Module):
-    def __init__(self,actor_learning_rate, input_dims,max_action, fc1_dims=256, fc2_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
+    def __init__(self,actor_learning_rate, input_dims,fc1_dims=256, fc2_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
         super(ActorNetwork,self).__init__()
         self.actor_learning_rate=actor_learning_rate
-        self.max_action=max_action
         self.name=name
-        self.chkpt_dir=chkpt_dir
+        self.checkpoint_dir=chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name + '_ddpg')
 
-        self.fc1= nn.Linear(input_dims,fc1_dims)
+
+        self.fc1_dims=fc1_dims
+        self.fc2_dims=fc2_dims
+        self.fc1= nn.Linear(*input_dims,fc1_dims)
         self.fc2= nn.Linear(fc1_dims,fc2_dims)
         self.fc3= nn.Linear(fc2_dims,n_actions)
 
         self.bn1 = nn.LayerNorm(self.fc1_dims)
         self.bn2 = nn.LayerNorm(self.fc2_dims)
 
-        self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
         self.init_weights(init_w)
 
@@ -83,10 +85,10 @@ class ActorNetwork(nn.Module):
 
     def forward(self,state):
         out = self.fc1(state)
-        out = self.relu(out)
+        out = F.relu(out)
         out = self.bn1(out)
         out = self.fc2(out)
-        out = self.relu(out)
+        out = F.relu(out)
         out = self.bn2(out)
         out = self.fc3(out)
         out = self.tanh(out)
@@ -94,6 +96,11 @@ class ActorNetwork(nn.Module):
 
     def sample_normal(self,state, reparameterize=True):
         pass
+
+    def init_weights(self, init_w):
+        self.fc1.weight.data = fanin_init(self.fc1.weight.data.size())
+        self.fc2.weight.data = fanin_init(self.fc2.weight.data.size())
+        self.fc3.weight.data.uniform_(-init_w, init_w)
 
     def save_checkpoint(self):
         T.save(self.state_dict(),self.checkpoint_file)

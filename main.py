@@ -14,11 +14,11 @@ def main():
     sigma=[0,.1,.2,.3,.4]
     L2_norm_coeff=[0,.01,.03,.1,.3,.6,1]
 
-    load_checkpoint= False
+    load_checkpoint=True
 
-    env=gym.make("CartPole-v1")
+    env=gym.make("CartPoleContinuousBulletEnv-v0")
 
-    agent = Agent(input_dims=env.observation_space.shape[0],n_actions=env.action_space.shape[0])
+    agent = Agent(input_dims=env.observation_space.shape,n_actions=env.action_space.shape[0])
     episodes = 250
     filename= 'MoutainCarContinuous.png'
     figure_file= 'plots/'+filename

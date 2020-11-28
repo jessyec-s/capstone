@@ -16,16 +16,16 @@ class Agent():
         self.tau=tau
 
 
-        self.actor=ActorNetwork(alpha, input_dims,n_actions)
-        self.critic=CriticNetwork(beta,input_dims,n_actions)
-        self.target_actor=ActorNetwork(alpha,input_dims,n_actions)
-        self.target_critic=CriticNetwork(beta,input_dims,n_actions)
+        self.actor=ActorNetwork(alpha, input_dims,n_actions=n_actions)
+        self.critic=CriticNetwork(beta,input_dims,n_actions=n_actions)
+        self.target_actor=ActorNetwork(alpha,input_dims,n_actions=n_actions)
+        self.target_critic=CriticNetwork(beta,input_dims,n_actions=n_actions)
 
         self.actor_optimizer = T.optim.Adam(self.actor.parameters(),lr=self.alpha)
         self.critic_optimizer = T.optim.Adam(self.critic.parameters(),lr=self.beta)
 
-        self.hard_update(self.actor_target,self.actor)
-        self.hard_update(self.critic_target,self.critic)
+        self.hard_update(self.target_actor,self.actor)
+        self.hard_update(self.target_critic,self.critic)
 
         self.memory = ReplayBuffer(max_size,input_dims,n_actions)
         self.random = OrnsteinUhlenbeckProcess(size=n_actions, theta=.15, mu=0.0,sigma=.2)
@@ -41,10 +41,10 @@ class Agent():
 
     def choose_action(self,observation):
         # here we turn into a tensor
+        observation= T.tensor(observation, dtype=T.float).to(self.actor.device)
         action = self.actor(observation)
-        action+=self.random.sample()
-
-        return action
+        # print(action," d "  ,action.detach().numpy(),"  d ",self.random.sample())
+        return action.detach().numpy()+self.random.sample()
 
     def remember(self,state,action,reward,new_state,done):
         self.memory.store_transition(state,action,reward,new_state,done)
@@ -79,9 +79,12 @@ class Agent():
         state_batch = T.tensor(state, dtype=T.float).to(self.actor.device)
         action_batch = T.tensor(action,dtype=T.float).to(self.actor.device)
 
-        next_q_values = self.target_critic([next_state_batch,self.target_actor(next_state_batch)])
-        target_q_batch= reward_batch +self.gamma*(1-done_batch.astype(np.float))*next_q_values
+        next_q_values = self.target_critic(next_state_batch,self.target_actor(next_state_batch))
+        # print("next q batch",next_q_values.size())
+        # print("reward batch", reward_batch.size(), " done_batch",done_batch.unsqueeze(1).size(),next_q_values.size())
 
+        target_q_batch= reward_batch.unsqueeze(1) +self.gamma*(~done_batch).unsqueeze(1)*next_q_values
+        # print("target q batch",target_q_batch.size())
         #critic update
 
         self.critic_optimizer.zero_grad()
@@ -93,13 +96,13 @@ class Agent():
         self.critic_optimizer.step()
         # actor update
         self.actor_optimizer.zero_grad()
-        policy_loss = -self.critic([state_batch,self.actor(state_batch)])
+        policy_loss = -self.critic(state_batch,self.actor(state_batch))
         policy_loss = policy_loss.mean()
         policy_loss.backward()
         self.actor_optimizer.step()
 
-        self.soft_update(self.actor_target, self.actor, self.tau)
-        self.soft_update(self.critic_target, self.critic, self.tau)
+        self.soft_update(self.target_actor, self.actor, self.tau)
+        self.soft_update(self.target_critic, self.critic, self.tau)
 
     def soft_update(self, target, source, tau):
         for target_param, param in zip(target.parameters(), source.parameters()):
