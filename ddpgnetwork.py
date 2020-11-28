@@ -26,7 +26,7 @@ class CriticNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc1 = nn.Linear(input_dims,fc1_dims)
+        self.fc1 = nn.Linear(*input_dims,fc1_dims)
         self.fc2 = nn.Linear(fc1_dims+n_actions,fc2_dims)
         self.fc3 = nn.Linear(fc2_dims,1)
 
@@ -60,10 +60,9 @@ class CriticNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class ActorNetwork(nn.Module):
-    def __init__(self,actor_learning_rate, input_dims,max_action, fc1_dims=256, fc2_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
+    def __init__(self,actor_learning_rate, input_dims,fc1_dims=256, fc2_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
         super(ActorNetwork,self).__init__()
         self.actor_learning_rate=actor_learning_rate
-        self.max_action=max_action
         self.name=name
         self.checkpoint_dir=chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name + '_ddpg')
@@ -71,7 +70,7 @@ class ActorNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc1= nn.Linear(input_dims,fc1_dims)
+        self.fc1= nn.Linear(*input_dims,fc1_dims)
         self.fc2= nn.Linear(fc1_dims,fc2_dims)
         self.fc3= nn.Linear(fc2_dims,n_actions)
 
