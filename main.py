@@ -1,7 +1,7 @@
 import pybullet_envs
 import gym
 import numpy as np
-from sac_torch import Agent
+from ddpg_torch import Agent
 import matplotlib as plt
 
 def main():
@@ -16,9 +16,9 @@ def main():
 
     load_checkpoint= False
 
-    env=gym.make("InvertedPendulumBulletEnv-v0")
+    env=gym.make("CartPole-v1")
 
-    agent = Agent(input_dims=env.observation_space.shape,env=env,n_actions=env.action_space.shape[0])
+    agent = Agent(input_dims=env.observation_space.shape[0],n_actions=env.action_space.shape[0])
     episodes = 250
     filename= 'MoutainCarContinuous.png'
     figure_file= 'plots/'+filename

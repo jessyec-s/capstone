@@ -3,21 +3,48 @@ import torch as T
 import torch.nn.functional as F
 import numpy as np
 from buffer import ReplayBuffer
-from network import ActorNetwork, CriticNetwork,ValueNetwork
-
+from ddpgnetwork import ActorNetwork, CriticNetwork
+from OUP import OrnsteinUhlenbeckProcess
 class Agent():
-    def __init__(self,alpha=0.0003,beta=.0003,input_dims=[8],env=None, gamma=.99,n_actions=2,
+    def __init__(self,alpha=0.0001,beta=.001,input_dims=[8], gamma=.99,n_actions=2,
                  max_size=1000000,layer1_size=256,layer2_size=256,tau=.005,batch_size=256,reward_scale=2):
         # reward scales  depends on action convention for the environment\
-        self.memory=ReplayBuffer()
-        self.actor=ActorNetwork()
-        self.critic=CriticNetwork()
-        self.target_actor=ActorNetwork()
-        self.target_critic=CriticNetwork()
+
+        self.alpha=alpha
+        self.beta=beta
+        self.gamma=gamma
+        self.tau=tau
+
+
+        self.actor=ActorNetwork(alpha, input_dims,n_actions)
+        self.critic=CriticNetwork(beta,input_dims,n_actions)
+        self.target_actor=ActorNetwork(alpha,input_dims,n_actions)
+        self.target_critic=CriticNetwork(beta,input_dims,n_actions)
+
+        self.actor_optimizer = T.optim.Adam(self.actor.parameters(),lr=self.alpha)
+        self.critic_optimizer = T.optim.Adam(self.critic.parameters(),lr=self.beta)
+
+        self.hard_update(self.actor_target,self.actor)
+        self.hard_update(self.critic_target,self.critic)
+
+        self.memory = ReplayBuffer(max_size,input_dims,n_actions)
+        self.random = OrnsteinUhlenbeckProcess(size=n_actions, theta=.15, mu=0.0,sigma=.2)
+
+
+        self.batch_size=batch_size
+        self.s_t=None
+        self.a_t=None
+
+    def hard_update(self,target, source):
+        for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(param.data)
 
     def choose_action(self,observation):
         # here we turn into a tensor
-        pass
+        action = self.actor(observation)
+        action+=self.random.sample()
+
+        return action
 
     def remember(self,state,action,reward,new_state,done):
         self.memory.store_transition(state,action,reward,new_state,done)
@@ -28,24 +55,54 @@ class Agent():
     def save_models(self):
         print("saving models:")
         self.actor.save_checkpoint()
-        self.critic1.save_checkpoint()
-        self.critic2.save_checkpoint()
+        self.critic.save_checkpoint()
+        self.target_critic.save_checkpoint()
+        self.target_actor.save_checkpoint()
+
     def load_models(self):
         print("loading models:")
         self.actor.load_checkpoint()
-        self.critic1.load_checkpoint()
-        self.critic2.load_checkpoint()
+        self.critic.load_checkpoint()
+        self.target_critic.load_checkpoint()
+        self.target_actor.load_checkpoint()
 
     def  learn(self):
         #  must fully load up memory, otherwise must keep learning
         if self.memory.mem_cntr <self.batch_size:
             return
+
         state,action, reward,new_state, done = self.memory.sample_buffer(self.batch_size)
 
-        reward = T.tensor(reward, dtype=T.float).to(self.actor.device)
-        done = T.tensor(done).to(self.actor.device)
-        state_ = T.tensor(new_state, dtype=T.float).to(self.actor.device)
-        state = T.tensor(state, dtype=T.float).to(self.actor.device)
-        action = T.tensor(action,dtype=T.float).to(self.actor.device)
+        reward_batch = T.tensor(reward, dtype=T.float).to(self.actor.device)
+        done_batch = T.tensor(done).to(self.actor.device)
+        next_state_batch = T.tensor(new_state, dtype=T.float).to(self.actor.device)
+        state_batch = T.tensor(state, dtype=T.float).to(self.actor.device)
+        action_batch = T.tensor(action,dtype=T.float).to(self.actor.device)
 
+        next_q_values = self.target_critic([next_state_batch,self.target_actor(next_state_batch)])
+        target_q_batch= reward_batch +self.gamma*(1-done_batch.astype(np.float))*next_q_values
 
+        #critic update
+
+        self.critic_optimizer.zero_grad()
+        q_batch = self.critic(state_batch,action_batch)
+
+        value_loss = F.mse_loss(q_batch,target_q_batch)
+        value_loss.backward()
+
+        self.critic_optimizer.step()
+        # actor update
+        self.actor_optimizer.zero_grad()
+        policy_loss = -self.critic([state_batch,self.actor(state_batch)])
+        policy_loss = policy_loss.mean()
+        policy_loss.backward()
+        self.actor_optimizer.step()
+
+        self.soft_update(self.actor_target, self.actor, self.tau)
+        self.soft_update(self.critic_target, self.critic, self.tau)
+
+    def soft_update(self, target, source, tau):
+        for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(
+                target_param.data * (1.0 - tau) + param.data * tau
+            )
