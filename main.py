@@ -14,13 +14,13 @@ def main():
     sigma=[0,.1,.2,.3,.4]
     L2_norm_coeff=[0,.01,.03,.1,.3,.6,1]
 
-    load_checkpoint=True
+    load_checkpoint=False
 
-    env=gym.make("CartPoleContinuousBulletEnv-v0")
-
-    agent = Agent(input_dims=env.observation_space.shape,n_actions=env.action_space.shape[0])
+    env=gym.make("FetchReach-v1")
+    env_dims = env.reset()['observation'].shape[0] + env.reset()['desired_goal'].shape[0]
+    agent = Agent(input_dims=env_dims,n_actions=env.action_space.shape[0])
     episodes = 250
-    filename= 'MoutainCarContinuous.png'
+    filename= 'FetchAndReach.png'
     figure_file= 'plots/'+filename
 
     best_score = env.reward_range[0]
@@ -30,6 +30,10 @@ def main():
         agent.load_models()
         env.render(mode='human')
 
+    keys =  ['observation', 'desired_goal']
+    env = gym.wrappers.FlattenObservation(
+              gym.wrappers.FilterObservation(env,keys))
+
     for i in range(episodes):
         observation = env.reset()
         done = False
@@ -38,7 +42,7 @@ def main():
             action=agent.choose_action(observation)
             observation_ , reward,done, info = env.step(action)
             score+=reward
-            agent.remember(observation,action, reward,observation_,done)
+            agent.remember(observation, action, reward, observation_, done)
             if not load_checkpoint:
                 agent.learn()
             else:

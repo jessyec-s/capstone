@@ -26,7 +26,7 @@ class CriticNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc1 = nn.Linear(*input_dims,fc1_dims)
+        self.fc1 = nn.Linear(input_dims,fc1_dims)
         self.fc2 = nn.Linear(fc1_dims+n_actions,fc2_dims)
         self.fc3 = nn.Linear(fc2_dims,1)
 
@@ -70,15 +70,7 @@ class ActorNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-<<<<<<< HEAD
-<<<<<<< HEAD
-        self.fc1= nn.Linear(*input_dims,fc1_dims)
-=======
         self.fc1= nn.Linear(input_dims,fc1_dims)
->>>>>>> simple bug handling
-=======
-        self.fc1= nn.Linear(*input_dims,fc1_dims)
->>>>>>> simple bug handling
         self.fc2= nn.Linear(fc1_dims,fc2_dims)
         self.fc3= nn.Linear(fc2_dims,n_actions)
 
