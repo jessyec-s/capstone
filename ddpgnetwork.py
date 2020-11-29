@@ -16,22 +16,29 @@ def fanin_init(size, fanin=None):
     return T.Tensor(size).uniform_(-v, v)
 
 class CriticNetwork(nn.Module):
-    def __init__(self,critic_learning_rate,input_dims,n_actions,name='critic',fc1_dims=256,fc2_dims=256,chkpt_dir='tmp/ddpg',init_w=3e-3):
+    def __init__(self,critic_learning_rate,input_dims,n_states, n_goals, n_actions,name='critic',fc1_dims=256,fc2_dims=256,fc3_dims=256,chkpt_dir='tmp/ddpg',init_w=3e-3):
         super(CriticNetwork,self).__init__()
         # save parameters
         self.name=name
         self.critic_learning_rate=critic_learning_rate
         self.checkpoint_dir=chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name + '_ddpg')
+        self.n_states=n_states
+        self.n_actions=n_actions
+        self.n_goals=n_goals
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc1 = nn.Linear(*input_dims,fc1_dims)
-        self.fc2 = nn.Linear(fc1_dims+n_actions,fc2_dims)
-        self.fc3 = nn.Linear(fc2_dims,1)
+        self.fc3_dims=fc3_dims
 
-        self.bn1 = nn.LayerNorm(fc1_dims)
-        self.bn2 = nn.LayerNorm(fc2_dims)
+        self.fc1 = nn.Linear(self.n_states+self.n_goals+self.n_actions,fc1_dims)
+        self.fc2 = nn.Linear(fc1_dims,fc2_dims)
+        self.fc3 = nn.Linear(fc2_dims,fc3_dims)
+        self.output = nn.Linear(fc3_dims, 1)
+
+        # self.bn1 = nn.LayerNorm(fc1_dims)
+        # self.bn2 = nn.LayerNorm(fc2_dims)
+        # self.bn3 = nn.LayerNorm(fc3_dims)
 
         self.init_weights(init_w)
 
@@ -44,14 +51,16 @@ class CriticNetwork(nn.Module):
         self.fc2.weight.data = fanin_init(self.fc2.weight.data.size())
         self.fc3.weight.data.uniform_(-init_w, init_w)
 
-    def forward(self,state,action):
+    def forward(self,input_tensor,action):
         # propagate action value through the neural network
-        out = self.fc1(state)
+        out = self.fc1(T.cat([input_tensor,action],dim=-1))
         out = F.relu(out)
-        out = self.bn1(out)
-        out = self.fc2(T.cat([out,action],1))
+        # out = self.bn1(out)
+        out = self.fc2(out)
         out = F.relu(out)
-        q_val = self.fc3(out)
+        out = self.fc3(out)
+        out = F.relu(out)
+        q_val = self.output(out)
         return q_val
 
     def save_checkpoint(self):
@@ -60,22 +69,28 @@ class CriticNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class ActorNetwork(nn.Module):
-    def __init__(self,actor_learning_rate, input_dims,fc1_dims=256, fc2_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
+    def __init__(self,actor_learning_rate, input_dims, n_states, n_goals, fc1_dims=256, fc2_dims=256,fc3_dims=256, n_actions=1, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
         super(ActorNetwork,self).__init__()
         self.actor_learning_rate=actor_learning_rate
         self.name=name
         self.checkpoint_dir=chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name + '_ddpg')
-
+        self.n_states=n_states
+        self.n_actions=n_actions
+        self.n_goals=n_goals
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc1= nn.Linear(*input_dims,fc1_dims)
-        self.fc2= nn.Linear(fc1_dims,fc2_dims)
-        self.fc3= nn.Linear(fc2_dims,n_actions)
+        self.fc3_dims=fc3_dims
 
-        self.bn1 = nn.LayerNorm(self.fc1_dims)
-        self.bn2 = nn.LayerNorm(self.fc2_dims)
+        self.fc1= nn.Linear(self.n_states+self.n_goals+self.n_actions,fc1_dims)
+        self.fc2= nn.Linear(fc1_dims,fc2_dims)
+        self.fc3= nn.Linear(fc2_dims,fc3_dims)
+        self.output=nn.Linear(fc3_dims, self.n_actions)
+
+        # self.bn1 = nn.LayerNorm(self.fc1_dims)
+        # self.bn2 = nn.LayerNorm(self.fc2_dims)
+        # self.bn3 = nn.LayerNorm(self.fc3_dims)
 
         self.tanh = nn.Tanh()
         self.init_weights(init_w)
@@ -83,14 +98,16 @@ class ActorNetwork(nn.Module):
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
         self.to(self.device)
 
-    def forward(self,state):
-        out = self.fc1(state)
+    def forward(self,input_tensor):
+        out = self.fc1(input_tensor)
         out = F.relu(out)
-        out = self.bn1(out)
+        # out = self.bn1(out)
         out = self.fc2(out)
         out = F.relu(out)
-        out = self.bn2(out)
+        # out = self.bn2(out)
         out = self.fc3(out)
+        out = self.relu(out)
+        out = self.output(out)
         out = self.tanh(out)
         return out
 
