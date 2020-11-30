@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+import HER
 class ReplayBuffer():
     def __init__(self, max_size, input_shape,n_actions):
         self.mem_size = max_size
@@ -28,10 +29,11 @@ class ReplayBuffer():
         batch = np.random.choice(max_memory,batch_size)
 
         #take those samples for analysis in the state,next state action reward and dones
-        states=self.state_memory[batch]
-        states_=self.new_state_memory[batch]
+        states=self.state_memory[batch] # action and goal concatted
+        states_=self.new_state_memory[batch] # action and goal concatted
         actions=self.action_memory[batch]
         rewards=self.reward_memory[batch]
         dones=self.terminal_memory[batch]
-
+        # get HER states here
+        states, states_,actions,rewards,dones=  HER.HERBuff(batch)
         return states, actions, rewards, states_, dones
