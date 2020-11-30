@@ -35,5 +35,5 @@ class ReplayBuffer():
         rewards=self.reward_memory[batch]
         dones=self.terminal_memory[batch]
         # get HER states here
-        states, states_,actions,rewards,dones=  HER.HERBuff(batch)
+        #states, states_,actions,rewards,dones=  HER.HERBuff(batch)
         return states, actions, rewards, states_, dones

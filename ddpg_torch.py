@@ -14,6 +14,7 @@ class Agent():
         self.beta=beta
         self.gamma=gamma
         self.tau=tau
+
         self.env=env
         self.load_checkpoint=load_checkpoint
         self.epochs=epochs
@@ -111,7 +112,6 @@ class Agent():
         #  must fully load up memory, otherwise must keep learning
         if self.memory.mem_cntr <self.batch_size:
             return
-
         state,action, reward,new_state, done = self.memory.sample_buffer(self.batch_size)
 
         reward_batch = T.tensor(reward, dtype=T.float).to(self.actor.device)
