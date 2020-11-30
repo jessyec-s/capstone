@@ -7,14 +7,16 @@ from ddpgnetwork import ActorNetwork, CriticNetwork
 from OUP import OrnsteinUhlenbeckProcess
 class Agent():
     def __init__(self,alpha=0.0001,beta=.001,input_dims=[8], gamma=.99,n_actions=2,
-                 max_size=1000000,layer1_size=256,layer2_size=256,tau=.005,batch_size=256,reward_scale=2):
+                 max_size=1000000,layer1_size=256,layer2_size=256,tau=.005,batch_size=256,reward_scale=2,env=None,load_checkpoint=False,epochs=40):
         # reward scales  depends on action convention for the environment\
 
         self.alpha=alpha
         self.beta=beta
         self.gamma=gamma
         self.tau=tau
-
+        self.env=env
+        self.load_checkpoint=load_checkpoint
+        self.epochs=epochs
 
         self.actor=ActorNetwork(alpha, input_dims,n_actions=n_actions)
         self.critic=CriticNetwork(beta,input_dims,n_actions=n_actions)
@@ -65,6 +67,45 @@ class Agent():
         self.critic.load_checkpoint()
         self.target_critic.load_checkpoint()
         self.target_actor.load_checkpoint()
+
+    def train(self):
+        episodes=200
+        best_score = self.env.reward_range[0]
+        score_history = []
+
+        if self.load_checkpoint:
+            self.load_models()
+            self.env.render(mode='human')
+        for i in range(episodes):
+            curr_data = self.env.reset()
+            done = False
+            score = 0
+            while not done:
+                observation = curr_data['observation']
+                desired_goal = curr_data['desired_goal']
+                achieved_goal = curr_data['achieved_goal']
+                observation = np.concatenate((observation, desired_goal), axis=0)
+                action = self.choose_action(observation)
+                observation_, reward, done, info = self.env.step(action)
+                score += reward
+
+                observation_ = observation_['observation']
+                desired_goal_ = curr_data['desired_goal']
+                observation_ = np.concatenate((observation_, desired_goal_), axis=0)
+
+                self.remember(observation, action, reward, observation_, done)
+                if not self.load_checkpoint:
+                    self.learn()
+                else:
+                    self.env.render()
+                observation = observation_
+            score_history.append(score)
+            avg_score = np.mean(score_history[-100:])
+            if avg_score > best_score:
+                best_score = avg_score
+                if not self.load_checkpoint:
+                    self.save_models()
+        return score_history
 
     def  learn(self):
         #  must fully load up memory, otherwise must keep learning

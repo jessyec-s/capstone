@@ -2,7 +2,7 @@ import pybullet_envs
 import gym
 import numpy as np
 from ddpg_torch import Agent
-import matplotlib as plt
+import matplotlib as mpl
 
 def main():
 
@@ -15,54 +15,14 @@ def main():
     L2_norm_coeff=[0,.01,.03,.1,.3,.6,1]
 
     load_checkpoint=False
-
+    epochs=40
     env=gym.make("FetchReach-v1")
     env_dims = env.reset()['observation'].shape[0] + env.reset()['desired_goal'].shape[0]
-    agent = Agent(input_dims=env_dims,n_actions=env.action_space.shape[0])
-    episodes = 250
-    filename= 'FetchAndReach.png'
-    figure_file= 'plots/'+filename
+    agent = Agent(input_dims=env_dims,n_actions=env.action_space.shape[0],load_checkpoint=load_checkpoint,env=env,epochs=epochs)
+    score_history=agent.train()
 
-    best_score = env.reward_range[0]
-    score_history=[]
-
-    if load_checkpoint:
-        agent.load_models()
-        env.render(mode='human')
-
-    for i in range(episodes):
-        curr_data = env.reset()
-        done = False
-        score = 0
-        while not done:
-            observation = curr_data['observation']
-            desired_goal = curr_data['desired_goal']
-            achieved_goal = curr_data['achieved_goal']
-            observation = np.concatenate((observation, desired_goal), axis=0)
-            action=agent.choose_action(observation)
-            observation_ , reward,done, info = env.step(action)
-            score+=reward
-
-            observation_ = observation_['observation']
-            desired_goal_ = curr_data['desired_goal']
-            observation_ = np.concatenate((observation_, desired_goal_), axis=0)
-
-            agent.remember(observation, action, reward, observation_, done)
-            if not load_checkpoint:
-                agent.learn()
-            else:
-                env.render()
-            observation = observation_
-        score_history.append(score)
-        avg_score = np.mean(score_history[-100:])
-        if avg_score> best_score:
-            best_score = avg_score
-            if not load_checkpoint:
-                agent.save_models()
-
-        print("episode",i,"score",score, "average score", avg_score)
     if not load_checkpoint:
-        x=[i+1 for i in range(episodes)]
+        x=[i+1 for i in range(epochs)]
         plot_error_drop(x,score_history)
 
 def plot_error_drop(tot_penalties, tot_epochs):
