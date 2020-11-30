@@ -18,7 +18,7 @@ class Agent():
         self.env=env
         self.load_checkpoint=load_checkpoint
         self.epochs=epochs
-
+        self.episodes=50
         self.actor=ActorNetwork(alpha, input_dims,n_actions=n_actions)
         self.critic=CriticNetwork(beta,input_dims,n_actions=n_actions)
         self.target_actor=ActorNetwork(alpha,input_dims,n_actions=n_actions)
@@ -30,7 +30,10 @@ class Agent():
         self.hard_update(self.target_actor,self.actor)
         self.hard_update(self.target_critic,self.critic)
 
-        self.memory = ReplayBuffer(max_size,input_dims,n_actions)
+        desired_size=env.observation_space["desired_goal"].shape[0]
+        achieved_size=env.observation_space["achieved_goal"].shape[0]
+        
+        self.memory = ReplayBuffer(max_size,self.episodes,input_dims,n_actions,desired_size,achieved_size)
         self.random = OrnsteinUhlenbeckProcess(size=n_actions, theta=.15, mu=0.0,sigma=.2)
 
 

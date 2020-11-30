@@ -1,15 +1,16 @@
 import gym
 import numpy as np
 import HER
+import math
 class ReplayBuffer():
     def __init__(self, max_size, batch_size, input_shape,n_actions, desired_size, achieved_size):
-        self.mem_size = max_size / batch_size
+        self.mem_size = math.floor(max_size / batch_size)
         self.mem_cntr = 0
         # initialize memory
         self.obs_memory = np.zeros((self.mem_size, batch_size, input_shape))
         self.action_memory = np.zeros((self.mem_size, batch_size, n_actions))
-        self.desired_goal_memory = np.zeros(self.mem_size, batch_size, desired_size)
-        self.achieved_goal_memory = np.zeros(self.mem_size, batch_size, achieved_size)
+        self.desired_goal_memory = np.zeros((self.mem_size, batch_size, desired_size))
+        self.achieved_goal_memory = np.zeros((self.mem_size, batch_size, achieved_size))
 
     def store_transition(self,batch):
         # update memory
