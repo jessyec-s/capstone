@@ -15,7 +15,6 @@ class Agent():
         self.gamma=gamma
         self.tau=tau
 
-
         self.actor=ActorNetwork(alpha, input_dims,n_actions=n_actions)
         self.critic=CriticNetwork(beta,input_dims,n_actions=n_actions)
         self.target_actor=ActorNetwork(alpha,input_dims,n_actions=n_actions)
@@ -70,7 +69,6 @@ class Agent():
         #  must fully load up memory, otherwise must keep learning
         if self.memory.mem_cntr <self.batch_size:
             return
-
         state,action, reward,new_state, done = self.memory.sample_buffer(self.batch_size)
 
         reward_batch = T.tensor(reward, dtype=T.float).to(self.actor.device)

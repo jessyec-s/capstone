@@ -74,6 +74,7 @@ class ActorNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
+        self.fc3_dims=fc3_dims
         self.fc1= nn.Linear(input_dims,fc1_dims)
         self.fc2= nn.Linear(fc1_dims,fc2_dims)
         self.fc3= nn.Linear(fc2_dims,fc3_dims)
