@@ -70,43 +70,67 @@ class Agent():
         self.target_actor.load_checkpoint()
 
     def train(self):
-        episodes=200
+        episodes=2
         best_score = self.env.reward_range[0]
         score_history = []
 
         if self.load_checkpoint:
             self.load_models()
             self.env.render(mode='human')
+
+        mb_obs, mb_ag, mb_dg, mb_action=[],[],[],[]
         for i in range(episodes):
+
             curr_data = self.env.reset()
-            done = False
-            score = 0
-            while not done:
-                observation = curr_data['observation']
-                desired_goal = curr_data['desired_goal']
-                achieved_goal = curr_data['achieved_goal']
-                observation = np.concatenate((observation, desired_goal), axis=0)
+            while(np.linalg.norm(curr_data['achieved_goal']-curr_data['desired_goal'])<0.05):
+                curr_data = self.env.reset()
+
+            observation = curr_data['observation']
+            desired_goal = curr_data['desired_goal']
+            achieved_goal = curr_data['achieved_goal']
+            observation = np.concatenate((observation, desired_goal), axis=0)
+            observation_arr, achieved_goal_arr, goal_arr,action_arr=[],[],[],[]
+            episode_goal_achieved, episode_observed_acheived= [],[]
+            for i in range(50): #guaranteed 50 steps
                 action = self.choose_action(observation)
-                observation_, reward, done, info = self.env.step(action)
-                score += reward
+                observation_, _, _, info = self.env.step(action)
+                # score += reward
 
+                achieved_goal_ = observation_['achieved_goal']
                 observation_ = observation_['observation']
-                desired_goal_ = curr_data['desired_goal']
-                observation_ = np.concatenate((observation_, desired_goal_), axis=0)
+                observation_ = np.concatenate((observation_, desired_goal), axis=0)
 
-                self.remember(observation, action, reward, observation_, done)
-                if not self.load_checkpoint:
-                    self.learn()
-                else:
-                    self.env.render()
+                # self.remember(observation, action, reward, observation_, done)
+                # if not self.load_checkpoint:
+                #     self.learn()
+                observation_arr.append(observation)
+                action_arr.append(action)
+                achieved_goal_arr.append(achieved_goal)
+                goal_arr.append(desired_goal)
                 observation = observation_
-            score_history.append(score)
-            avg_score = np.mean(score_history[-100:])
-            if avg_score > best_score:
-                best_score = avg_score
-                if not self.load_checkpoint:
-                    self.save_models()
-        return score_history
+                achieved_goal=achieved_goal_
+
+            achieved_goal_arr.append(achieved_goal)
+            observation_arr.append(observation)
+            mb_action.append(action_arr)
+            mb_ag.append(achieved_goal_arr)
+            mb_dg.append(goal_arr)
+            mb_obs.append(observation_arr)
+        mb_action=np.array(mb_action)
+        mb_ag=np.array(mb_ag)
+        mb_dg=np.array(mb_dg)
+        mb_obs=np.array(mb_obs)
+        self.memory.store_transition(mb_obs,mb_action,mb_dg,mb_ag)#fix this function #this is where the second loop is handled
+        # if desired--ADD NORMALIZER HERE
+        for _ in range(50):
+            self.learn()
+
+        self.soft_update(self.target_actor, self.actor, self.tau)
+        self.soft_update(self.target_critic, self.critic, self.tau)
+
+
+        # print("episode", i, "score", score, "average score", avg_score)
+        return score_history # _eval_agent--to get score
 
     def  learn(self):
         #  must fully load up memory, otherwise must keep learning
@@ -142,8 +166,6 @@ class Agent():
         policy_loss.backward()
         self.actor_optimizer.step()
 
-        self.soft_update(self.target_actor, self.actor, self.tau)
-        self.soft_update(self.target_critic, self.critic, self.tau)
 
     def soft_update(self, target, source, tau):
         for target_param, param in zip(target.parameters(), source.parameters()):
