@@ -2,7 +2,7 @@ import pybullet_envs
 import gym
 import numpy as np
 from ddpg_torch import Agent
-import matplotlib as mpl
+import matplotlib.pyplot as mpl
 
 def main():
 
@@ -16,9 +16,8 @@ def main():
 
     load_checkpoint=False
     epochs=40
-    env=gym.make("FetchPickAndPlace-v1")
-    env_dims = env.reset()['observation'].shape[0] + env.reset()['desired_goal'].shape[0]
-    agent = Agent(input_dims=env_dims,n_actions=env.action_space.shape[0],load_checkpoint=load_checkpoint,env=env,epochs=epochs)
+    env=gym.make("FetchReach-v1")
+    agent = Agent(n_actions=env.action_space.shape[0],load_checkpoint=load_checkpoint,env=env,epochs=epochs)
     score_history=agent.train()
 
     if not load_checkpoint:
