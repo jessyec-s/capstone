@@ -78,7 +78,7 @@ class Agent():
             self.load_models()
             self.env.render(mode='human')
 
-        mb_obs, mb_ag, mb_dg, mb_action=[],[],[],[]
+        mb, mb_obs, mb_ag, mb_dg, mb_action=[],[],[],[],[]
         for i in range(episodes):
 
             curr_data = self.env.reset()
@@ -120,7 +120,9 @@ class Agent():
         mb_ag=np.array(mb_ag)
         mb_dg=np.array(mb_dg)
         mb_obs=np.array(mb_obs)
-        self.memory.store_transition(mb_obs,mb_action,mb_dg,mb_ag)#fix this function #this is where the second loop is handled
+        mb.append([mb_obs,mb_action,mb_dg,mb_ag])
+        self.store(mb)
+
         # if desired--ADD NORMALIZER HERE
         for _ in range(50):
             self.learn()
@@ -131,6 +133,11 @@ class Agent():
 
         # print("episode", i, "score", score, "average score", avg_score)
         return score_history # _eval_agent--to get score
+
+    def store(self, batches) :
+        for batch in batches :
+            self.memory.store_transition(batch)
+        # we could update NORMALIZER here
 
     def  learn(self):
         #  must fully load up memory, otherwise must keep learning
