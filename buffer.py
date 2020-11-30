@@ -7,18 +7,19 @@ class ReplayBuffer():
         self.mem_size = math.floor(max_size / batch_size)
         self.mem_cntr = 0
         # initialize memory
-        self.obs_memory = np.zeros((self.mem_size, batch_size, input_shape))
+        self.obs_memory = np.zeros((self.mem_size, batch_size + 1, input_shape))
         self.action_memory = np.zeros((self.mem_size, batch_size, n_actions))
         self.desired_goal_memory = np.zeros((self.mem_size, batch_size, desired_size))
-        self.achieved_goal_memory = np.zeros((self.mem_size, batch_size, achieved_size))
+        self.achieved_goal_memory = np.zeros((self.mem_size, batch_size + 1, achieved_size))
 
     def store_transition(self,batch):
         # update memory
+        print(batch[0].shape,batch[1].shape,batch[2].shape,batch[3].shape)
         index=self.mem_cntr % self.mem_size
         self.obs_memory[index]=batch[0]
         self.action_memory[index]=batch[1]
         self.desired_goal_memory[index]=batch[2]
-        self.achieved_goal[index]=batch[3]
+        self.achieved_goal_memory[index]=batch[3]
 
         self.mem_cntr+=1
 

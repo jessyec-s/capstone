@@ -33,7 +33,7 @@ class Agent():
         desired_size=env.observation_space["desired_goal"].shape[0]
         achieved_size=env.observation_space["achieved_goal"].shape[0]
         
-        self.memory = ReplayBuffer(max_size,self.episodes+1,input_dims,n_actions,desired_size,achieved_size)
+        self.memory = ReplayBuffer(max_size,self.episodes,input_dims,n_actions,desired_size,achieved_size)
         self.random = OrnsteinUhlenbeckProcess(size=n_actions, theta=.15, mu=0.0,sigma=.2)
 
 
@@ -119,8 +119,12 @@ class Agent():
             mb_ag.append(achieved_goal_arr)
             mb_dg.append(goal_arr)
             mb_obs.append(observation_arr)
-            mb.append([mb_obs,mb_action,mb_dg,mb_ag]) 
-        mb=np.array(mb)
+            # mb.append([np.array(mb_obs),np.array(mb_action),np.array(mb_dg),np.array(mb_ag)])
+            # print(len(mb))
+            # print(np.array(mb_obs).shape)
+
+        mb =(np.array(mb_obs), np.array(mb_action), np.array(mb_dg), np.array(mb_ag))
+        print(len(mb),len(mb[0]))
         self.store(mb)
 
         # if desired--ADD NORMALIZER HERE
@@ -135,8 +139,9 @@ class Agent():
         return score_history # _eval_agent--to get score
 
     def store(self, batches) :
-        for batch in batches :
-            self.memory.store_transition(batch)
+        obs,actions,dgs,ags=batches
+        for ob,action,dg,ag in zip(obs,actions,dgs,ags) :
+            self.memory.store_transition((ob,action,dg,ag))
         # we could update NORMALIZER here
 
     def  learn(self):
