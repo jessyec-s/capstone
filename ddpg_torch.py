@@ -24,6 +24,10 @@ class Agent():
         self.epochs=epochs
         self.cycles=40
         self.episodes=50
+        self.average_success=[]
+        self.best_return=-2500
+        self.max_score = 0
+
         # print(input_dims)
         self.actor=ActorNetwork(alpha, self.observation_shape+self.desired_goal_shape,n_actions=n_actions)
         self.critic=CriticNetwork(beta,self.observation_shape+self.desired_goal_shape,n_actions=n_actions)
@@ -87,7 +91,7 @@ class Agent():
             self.load_models()
             self.env.render(mode='human')
         for j in range(self.epochs):
-            for _ in range(self.cycles):
+            for k in range(self.cycles):
                 mb, mb_obs, mb_ag, mb_dg, mb_action=[],[],[],[],[]
 
                 for i in range(episodes):
@@ -146,7 +150,7 @@ class Agent():
                 self.soft_update(self.target_critic, self.critic, self.tau)
 
                 success_rate=self.eval_agent()
-                print("success rate", success_rate)
+                print("success rate", success_rate," epoch ",j, " cycles ", k )
             score_history.append(success_rate)
         return score_history # _eval_agent--to get score
 
@@ -215,6 +219,13 @@ class Agent():
                 success_rate.append(info['is_success'])
             tot_success.append(success_rate)
         tot_success=np.array(tot_success)
-        print("score",score)
         local_success = np.mean(tot_success[:,-1])
+        self.average_success.append(score)
+        ave_success=np.mean(self.average_success[-100:])
+        print("score",score, "average_score: ",ave_success)
+        if self.best_return<ave_success:
+            self.best_return=ave_success
+            if not self.load_checkpoint:
+                self.save_models()
+
         return local_success
