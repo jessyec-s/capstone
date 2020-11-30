@@ -30,18 +30,23 @@ def main():
         agent.load_models()
         env.render(mode='human')
 
-    keys =  ['observation', 'desired_goal']
-    env = gym.wrappers.FlattenObservation(
-              gym.wrappers.FilterObservation(env,keys))
-
     for i in range(episodes):
-        observation = env.reset()
+        curr_data = env.reset()
         done = False
         score = 0
         while not done:
+            observation = curr_data['observation']
+            desired_goal = curr_data['desired_goal']
+            achieved_goal = curr_data['achieved_goal']
+            observation = np.concatenate((observation, desired_goal), axis=0)
             action=agent.choose_action(observation)
             observation_ , reward,done, info = env.step(action)
             score+=reward
+
+            observation_ = observation_['observation']
+            desired_goal_ = curr_data['desired_goal']
+            observation_ = np.concatenate((observation_, desired_goal_), axis=0)
+
             agent.remember(observation, action, reward, observation_, done)
             if not load_checkpoint:
                 agent.learn()
