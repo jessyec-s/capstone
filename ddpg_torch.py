@@ -33,7 +33,7 @@ class Agent():
         desired_size=env.observation_space["desired_goal"].shape[0]
         achieved_size=env.observation_space["achieved_goal"].shape[0]
         
-        self.memory = ReplayBuffer(max_size,self.episodes,input_dims,n_actions,desired_size,achieved_size)
+        self.memory = ReplayBuffer(max_size,self.episodes+1,input_dims,n_actions,desired_size,achieved_size)
         self.random = OrnsteinUhlenbeckProcess(size=n_actions, theta=.15, mu=0.0,sigma=.2)
 
 
@@ -119,11 +119,8 @@ class Agent():
             mb_ag.append(achieved_goal_arr)
             mb_dg.append(goal_arr)
             mb_obs.append(observation_arr)
-        mb_action=np.array(mb_action)
-        mb_ag=np.array(mb_ag)
-        mb_dg=np.array(mb_dg)
-        mb_obs=np.array(mb_obs)
-        mb.append([mb_obs,mb_action,mb_dg,mb_ag])
+            mb.append([mb_obs,mb_action,mb_dg,mb_ag]) 
+        mb=np.array(mb)
         self.store(mb)
 
         # if desired--ADD NORMALIZER HERE
