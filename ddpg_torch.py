@@ -23,7 +23,7 @@ class Agent():
         self.load_checkpoint=load_checkpoint
         self.epochs=epochs
         self.cycles=40
-        self.episodes=50
+        self.episodes=2
         self.average_success=[]
         self.best_return=-2500
         self.max_score = 0
@@ -217,6 +217,8 @@ class Agent():
                 obs=observation_new['observation']
                 g = observation_new['desired_goal']
                 success_rate.append(info['is_success'])
+                if self.load_checkpoint:
+                    self.env.render()
             tot_success.append(success_rate)
         tot_success=np.array(tot_success)
         local_success = np.mean(tot_success[:,-1])
