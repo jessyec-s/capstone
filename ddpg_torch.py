@@ -2,13 +2,15 @@ import os
 import torch as T
 import torch.nn.functional as F
 import numpy as np
+import normalizer
 from buffer import ReplayBuffer
 from ddpgnetwork import ActorNetwork, CriticNetwork
 from OUP import OrnsteinUhlenbeckProcess
 from HER import HERBuff
+
 class Agent():
     def __init__(self,alpha=0.0001,beta=.001,input_dims=[8], gamma=.99,n_actions=2,
-                 max_size=1000000,layer1_size=256,layer2_size=256,tau=.005,batch_size=256,reward_scale=2,env=None,load_checkpoint=False,epochs=40):
+                 max_size=1000000,layer1_size=256,layer2_size=256,tau=.005,batch_size=256,reward_scale=2,env=None,load_checkpoint=False,epochs=40,clip_range=5,clip_obs=200):
         # reward scales  depends on action convention for the environment\
         self.observation_shape=env.observation_space['observation'].shape[0]
         self.desired_goal_shape=env.observation_space['desired_goal'].shape[0]
@@ -27,6 +29,8 @@ class Agent():
         self.average_success=[]
         self.best_return=-2500
         self.max_score = 0
+        self.clip_range = clip_range
+        self.clip_obs = clip_obs
 
         # print(input_dims)
         self.actor=ActorNetwork(alpha, self.observation_shape+self.desired_goal_shape,n_actions=n_actions)
@@ -46,6 +50,8 @@ class Agent():
         self.memory = ReplayBuffer(max_size,self.episodes,self.observation_shape,n_actions,desired_size,achieved_size, self.hermemory.sample_her_transitions)
         self.random = OrnsteinUhlenbeckProcess(size=n_actions, theta=.15, mu=0.0,sigma=.2)
 
+        self.obs_normalizer = normalizer(size=self.observation_shape, default_clip_range=self.clip_range)
+        self.goal_normalizer = normalizer(size=self.desired_goal_shape, default_clip_range=self.clip_range)
 
         self.batch_size=batch_size
         self.s_t=None
@@ -55,10 +61,10 @@ class Agent():
         for target_param, param in zip(target.parameters(), source.parameters()):
             target_param.data.copy_(param.data)
 
-    def choose_action(self,observation):
-        # here we turn into a tensor
-        observation= T.tensor(observation, dtype=T.float).to(self.actor.device)
-        action = self.actor(observation)
+    def choose_action(self,observation, desired_goal):
+        # here we want to pre-process the inputs (ie. normalize and concatenate observation and desired_goal)
+        input_tensor = self._preproc_inputs(observation, desired_goal)
+        action = self.actor(input_tensor)
         # print(action," d "  ,action.detach().numpy(),"  d ",self.random.sample())
         return action.detach().numpy()+self.random.sample()
 
@@ -104,11 +110,12 @@ class Agent():
                     desired_goal = curr_data['desired_goal']
                     achieved_goal = curr_data['achieved_goal']
                     obs=observation
-                    observation = np.concatenate((observation, desired_goal), axis=0)
+                    # observation = np.concatenate((observation, desired_goal), axis=0)
                     observation_arr, achieved_goal_arr, goal_arr,action_arr=[],[],[],[]
                     episode_goal_achieved, episode_observed_acheived= [],[]
                     for i in range(50): #guaranteed 50 steps
-                        action = self.choose_action(observation)
+                        # observation = self._preproc_inputs(observation, desired_goal)
+                        action = self.choose_action(observation, desired_goal)
                         observation_, _, _, info = self.env.step(action)
                         # score += reward
 
@@ -142,7 +149,6 @@ class Agent():
                 # print(len(mb),len(mb[0]))
                 self.store(mb)
 
-                # if desired--ADD NORMALIZER HERE
                 for _ in range(50):
                     self.learn()
 
@@ -159,6 +165,48 @@ class Agent():
         for ob,action,dg,ag in zip(obs,actions,dgs,ags) :
             self.memory.store_transition((ob,action,dg,ag))
         # we could update NORMALIZER here
+        self._update_normalizer(batches)
+
+    # update the normalizer
+    def _update_normalizer(self, episode_batch):
+        mb_obs, mb_actions, mb_dg, mb_ag= episode_batch
+        mb_obs_next = mb_obs[:, 1:, :]
+        mb_ag_next = mb_ag[:, 1:, :]
+        # get the number of normalization transitions
+        num_transitions = mb_actions.shape[1]
+        # create the new buffer to store them
+        buffer_temp = {'obs': mb_obs, 
+                       'achieved_goal': mb_ag,
+                       'desired_goal': mb_dg, 
+                       'actions': mb_actions, 
+                       'obs_next': mb_obs_next,
+                       'ag_next': mb_ag_next,
+                       }
+        transitions = self.her_module.sample_her_transitions(buffer_temp, num_transitions)
+        obs, dg = transitions['obs'], transitions['desired_goal']
+        # pre process the obs and g
+        transitions['obs'], transitions['desired_goal'] = self._preproc_og(obs, dg)
+        # update
+        self.obs_normalizer.update(transitions['obs'])
+        self.goal_normalizer.update(transitions['desired_goal'])
+        # recompute the stats
+        self.obs_normalizer.recompute_stats()
+        self.goal_normalizer.recompute_stats()
+
+    def _preproc_og(self, o, g):
+        o = np.clip(o, -self.clip_obs, self.clip_obs)
+        g = np.clip(g, -self.clip_obs, self.clip_obs)
+        return o, g
+
+    # pre_process the inputs
+    def _preproc_inputs(self, obs, g):
+        obs_norm = self.obs_normalizer.normalize(obs)
+        g_norm = self.goal_normalizer.normalize(g)
+        # concatenate the stuffs
+        inputs = np.concatenate([obs_norm, g_norm])
+        inputs = torch.tensor(inputs, dtype=torch.float32).unsqueeze(0)
+
+        return inputs
 
     def  learn(self):
         #  must fully load up memory, otherwise must keep learning
@@ -166,11 +214,24 @@ class Agent():
         #     return
         transitions = self.memory.sample_buffer(self.batch_size)
         # NORMALIZE HERE!!! lookat me! I'm normal ('_')<--Nadia
-        reward_batch = T.tensor(transitions['reward'], dtype=T.float).to(self.actor.device)
+        # pre-process the observation and goal
+        obs, obs_next, dg = transitions['obs'], transitions['obs_next'], transitions['desired_goal']
+        transitions['obs'], transitions['desired_goal'] = self._preproc_og(obs, dg)
+        transitions['obs_next'], transitions['ag_next'] = self._preproc_og(obs_next, dg)
 
-        # done_batch = T.tensor(done).to(self.actor.device)
-        next_state_batch = T.tensor(np.concatenate([transitions['obs_next'],transitions['desired_goal']],axis=1), dtype=T.float).to(self.actor.device)
-        state_batch = T.tensor(np.concatenate([transitions['obs'],transitions['desired_goal']],axis=1), dtype=T.float).to(self.actor.device)
+        # Normalize
+        obs_norm = self.obs_normalizer.normalize(transitions['obs'])
+        g_norm = self.goal_normalizer.normalize(transitions['desired_goal'])
+        obs_next_norm = self.obs_normalizer.normalize(transitions['obs_next'])
+        g_next_norm = self.goal_normalizer.normalize(transitions['ag_next'])
+
+        state_norm = np.concatenate([obs_norm, g_norm], axis=1)
+        state_next_norm = np.concatenate([obs_next_norm, g_next_norm], axis=1)
+
+        # transfer norms into tensors
+        reward_batch = T.tensor(transitions['reward'], dtype=T.float).to(self.actor.device)
+        next_state_batch = T.tensor(state_next_norm, dtype=torch.float32).to(self.actor.device)
+        state_batch = T.tensor(state_norm, dtype=torch.float32).to(self.actor.device)
         action_batch = T.tensor(transitions['action'],dtype=T.float).to(self.actor.device)
         next_state=self.target_actor(next_state_batch)
         # print(next_state.size())
@@ -211,7 +272,8 @@ class Agent():
             obs=observation['observation']
             g = observation['desired_goal']
             for _ in range(50):
-                actions=self.choose_action(np.concatenate([obs,g]))
+                # input_tensor = self._preproc_inputs(obs, g)
+                actions=self.choose_action(obs, g)
                 observation_new, reward ,_, info=self.env.step(actions)
                 score+=reward
                 obs=observation_new['observation']
