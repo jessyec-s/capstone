@@ -23,7 +23,7 @@ class Agent():
         self.load_checkpoint=load_checkpoint
         self.epochs=epochs
         self.cycles=40
-        self.episodes=2
+        self.episodes=50
         self.average_success=[]
         self.best_return=-2500
         self.max_score = 0
