@@ -16,7 +16,7 @@ def fanin_init(size, fanin=None):
     return T.Tensor(size).uniform_(-v, v)
 
 class CriticNetwork(nn.Module):
-    def __init__(self,critic_learning_rate,input_dims,n_actions,name='critic',fc1_dims=256,fc2_dims=256,fc3_dims=256,chkpt_dir='tmp/ddpg',init_w=3e-3):
+    def __init__(self,critic_learning_rate,input_dims,n_actions,name='critic',fc1_dims=256,fc2_dims=256,chkpt_dir='tmp/ddpg',init_w=3e-3):
         super(CriticNetwork,self).__init__()
         # save parameters
         self.name=name
@@ -26,14 +26,12 @@ class CriticNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc1 = nn.Linear(input_dims,fc1_dims)
+        self.fc1 = nn.Linear(*input_dims,fc1_dims)
         self.fc2 = nn.Linear(fc1_dims+n_actions,fc2_dims)
-        self.fc3 = nn.Linear(fc2_dims,fc3_dims)
-        self.output = nn.Linear(fc3_dims,1)
+        self.fc3 = nn.Linear(fc2_dims,1)
 
         self.bn1 = nn.LayerNorm(fc1_dims)
         self.bn2 = nn.LayerNorm(fc2_dims)
-        self.bn3 = nn.LayerNorm(fc3_dims)
 
         self.init_weights(init_w)
 
@@ -53,9 +51,7 @@ class CriticNetwork(nn.Module):
         out = self.bn1(out)
         out = self.fc2(T.cat([out,action],1))
         out = F.relu(out)
-        out = self.fc3(out)
-        out = F.relu(out)
-        q_val = self.output(out)
+        q_val = self.fc3(out)
         return q_val
 
     def save_checkpoint(self):
@@ -64,7 +60,7 @@ class CriticNetwork(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class ActorNetwork(nn.Module):
-    def __init__(self,actor_learning_rate, input_dims,fc1_dims=256, fc2_dims=256,fc3_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
+    def __init__(self,actor_learning_rate, input_dims,fc1_dims=256, fc2_dims=256,n_actions=2, name='actor',chkpt_dir='tmp/ddpg',init_w=3e-3):
         super(ActorNetwork,self).__init__()
         self.actor_learning_rate=actor_learning_rate
         self.name=name
@@ -74,15 +70,12 @@ class ActorNetwork(nn.Module):
 
         self.fc1_dims=fc1_dims
         self.fc2_dims=fc2_dims
-        self.fc3_dims=fc3_dims
-        self.fc1= nn.Linear(input_dims,fc1_dims)
+        self.fc1= nn.Linear(*input_dims,fc1_dims)
         self.fc2= nn.Linear(fc1_dims,fc2_dims)
-        self.fc3= nn.Linear(fc2_dims,fc3_dims)
-        self.output = nn.Linear(fc3_dims, n_actions)
+        self.fc3= nn.Linear(fc2_dims,n_actions)
 
         self.bn1 = nn.LayerNorm(self.fc1_dims)
         self.bn2 = nn.LayerNorm(self.fc2_dims)
-        self.bn3 = nn.LayerNorm(self.fc3_dims)
 
         self.tanh = nn.Tanh()
         self.init_weights(init_w)
@@ -98,9 +91,6 @@ class ActorNetwork(nn.Module):
         out = F.relu(out)
         out = self.bn2(out)
         out = self.fc3(out)
-        out = F.relu(out)
-        out = self.bn3(out)
-        out = self.output(out)
         out = self.tanh(out)
         return out
 
