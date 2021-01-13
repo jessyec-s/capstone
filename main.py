@@ -14,7 +14,7 @@ def main():
     sigma=[0,.1,.2,.3,.4]
     L2_norm_coeff=[0,.01,.03,.1,.3,.6,1]
 
-    load_checkpoint=True
+    load_checkpoint=False
 
     env=gym.make("CartPoleContinuousBulletEnv-v0")
 
