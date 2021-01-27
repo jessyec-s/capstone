@@ -17,7 +17,7 @@ import sys
 import PIL
 import numpy as np
 import pygame
-import openmvcam.tools.pyopenmv as pyopenmv
+import pyopenmv
 from time import sleep
 from getobjectblob import blob_script
 
