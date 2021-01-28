@@ -9,7 +9,6 @@ ANGLE_LIMIT=(0.,180.)
 HEIGHT_LIMIT=(0.,150.)
 
 
-
 def goal_distance(goal_a, goal_b):
     assert len(goal_a) == len(goal_b)
     return np.linalg.norm(goal_a - goal_b, axis=-1)
@@ -18,7 +17,6 @@ def goal_distance(goal_a, goal_b):
 class UarmEnv(SwiftAPI):
     def init(self, port=None, baudrate=115200, timeout=None, **kwargs):
         super(self, port=None, baudrate=115200, timeout=None, **kwargs)
-
 
     def ENV_reset(self):
         radius=random.uniform(RADIUS_LIMIT[MIN],RADIUS_LIMIT[MAX])
@@ -59,7 +57,7 @@ class UarmEnv(SwiftAPI):
         # cost = self.compute_reward(new_u,[0,0,0],)
         self.set_polar(stretch=new_u[0],rotation=new_u[1],height=new_u[2])
 
-        return {"observation":self.get_polar(),"desiredGoal":self.get_camera_data(),"AchievedGoal":self.get_polar()}, done,-cost,None
+        return {"observation":self.get_polar(),"desiredGoal":self.get_camera_data(),"AchievedGoal":self.get_polar()}
 
 
 
