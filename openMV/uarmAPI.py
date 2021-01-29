@@ -18,12 +18,12 @@ class UarmEnv(SwiftAPI):
     def init(self, port=None, baudrate=115200, timeout=10, **kwargs):
         super(self, port='/dev/cu.usbmodem142401', baudrate=115200, timeout=20, **kwargs)
 
-    def ENV_reset(self):
+    def ENV_reset(self, should_wait=False):
         radius=random.uniform(RADIUS_LIMIT[MIN],RADIUS_LIMIT[MAX])
         angle=random.uniform(ANGLE_LIMIT[MIN],ANGLE_LIMIT[MAX])
         height=random.uniform(HEIGHT_LIMIT[MIN],HEIGHT_LIMIT[MAX])
         print("radius: ",radius, "angle: ",angle,"height: ",height)
-        self.set_polar(radius,angle,height)
+        self.set_polar(radius,angle,height,wait=should_wait)
 
     def compute_reward(self, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.

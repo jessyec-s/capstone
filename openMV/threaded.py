@@ -27,7 +27,7 @@ from getobjectblob import v_angle_key
 from uarmAPI import UarmEnv
 import threading
 
-distance = None
+distance = ""
 h_angle = 0
 v_angle = 0
 camera_event = threading.Event()
@@ -56,7 +56,7 @@ def uarm_exec() :
         distance_ = distance
         print("Got distance from camera: ", distance_)
 
-        uarm_controller.ENV_reset() # here would actually use distance to determine new value?
+        uarm_controller.ENV_reset(should_wait=True) # here would actually use distance to determine new value?
         uarm_controller.flush_cmd(wait_stop=True)
 
         data_ready.clear()
@@ -138,10 +138,11 @@ def camera_exec():
             if camera_event.is_set() and (data_ready.is_set() is False):
                 buff = pyopenmv.tx_buf(tx_len).decode()
                 if distance_key in buff:
+                    split_buff = str(buff).splitlines()
                     global distance
-                    distance = buff
+                    distance = split_buff[0]
+                    print("Camera setting distance: ", distance)
                     data_ready.set()
-                    print("Camera setting distance: ", buff)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                  running = False
