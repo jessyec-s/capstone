@@ -1,3 +1,6 @@
+distance_key = "distance: "
+h_angle_key = "horizontal angle: "
+v_angle_key = "vertical angle: "
 
 blob_script="""# #Single Color Code Tracking Example
 #
@@ -125,8 +128,8 @@ while(True):
                 # print("blob.cx, blob.cy, blob.w, blob.h are: ")
                 # print(blob.cx(), blob.cy(),blob.w(), blob.h())
                 print("distance: ", distance_to_obj(blob.h()))
-                print("horiz angle: ",h_angle_to_obj(blob.cx())) 
-                print("horiz angle: ",v_angle_to_obj(blob.cy())) 
+                print("horizontal angle: ",h_angle_to_obj(blob.cx())) 
+                print("vertical angle: ",v_angle_to_obj(blob.cy())) 
                 #print (buf)
 
             object_x_old = int(blob.cx())

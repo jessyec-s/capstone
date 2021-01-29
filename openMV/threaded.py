@@ -20,25 +20,48 @@ import pygame
 import pyopenmv
 from time import sleep
 from getobjectblob import blob_script
+from getobjectblob import distance_key
+from getobjectblob import h_angle_key
+from getobjectblob import v_angle_key
 
 from uarmAPI import UarmEnv
 import threading
 
+distance = None
+h_angle = 0
+v_angle = 0
+camera_event = threading.Event()
+data_ready = threading.Event()
+
+lock = threading.Lock()
+
 def main() :
+    camera_event.clear()
+    data_ready.clear()
+
     uarm_thread = threading.Thread(target=uarm_exec)
     uarm_thread.start()
-
     camera_exec()
 
     uarm_thread.join()
 
 def uarm_exec() :
     uarm_controller = UarmEnv()
-    while (True) :
-        uarm_controller.ENV_reset()
+    uarm_controller.waiting_ready() # wait for uarm to connect
+    while True:
+        camera_event.set() # want data from camera
+        data_ready.wait() # wait until camera sets value
+        camera_event.clear()
 
-    # need to set a condition here to signify connected ?
-def camera_connect() :
+        distance_ = distance
+        print("Got distance from camera: ", distance_)
+
+        uarm_controller.ENV_reset() # here would actually use distance to determine new value?
+        uarm_controller.flush_cmd(wait_stop=True)
+
+        data_ready.clear()
+
+def camera_connect():
     portname = "/dev/cu.usbmodem3172345631381"
 
     connected = False
@@ -74,7 +97,7 @@ def camera_connect() :
 
     return running, Clock, font
 
-def camera_exec() :
+def camera_exec():
     pygame.init()
     # if len(sys.argv)!= 2:
     #     print ('usage: pyopenmv_fb.py <serial port>')
@@ -111,8 +134,14 @@ def camera_exec() :
             pygame.display.flip()
         tx_len = pyopenmv.tx_buf_len()
         # sleep(0.250)
-        if (tx_len):
-            print(pyopenmv.tx_buf(tx_len).decode())
+        if tx_len:
+            if camera_event.is_set() and (data_ready.is_set() is False):
+                buff = pyopenmv.tx_buf(tx_len).decode()
+                if distance_key in buff:
+                    global distance
+                    distance = buff
+                    data_ready.set()
+                    print("Camera setting distance: ", buff)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                  running = False

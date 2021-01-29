@@ -15,8 +15,8 @@ def goal_distance(goal_a, goal_b):
 
 
 class UarmEnv(SwiftAPI):
-    def init(self, port=None, baudrate=115200, timeout=None, **kwargs):
-        super(self, port=None, baudrate=115200, timeout=None, **kwargs)
+    def init(self, port=None, baudrate=115200, timeout=10, **kwargs):
+        super(self, port='/dev/cu.usbmodem142401', baudrate=115200, timeout=20, **kwargs)
 
     def ENV_reset(self):
         radius=random.uniform(RADIUS_LIMIT[MIN],RADIUS_LIMIT[MAX])
@@ -31,7 +31,6 @@ class UarmEnv(SwiftAPI):
         return -(d > self.distance_threshold).astype(np.float32)
 
 
-    #
     def get_camera_data(self):
         pass
 
