@@ -53,7 +53,7 @@ uart = UART(3, 115200, timeout_char = 1000)
 #              (30, 100, -64, -8, -32, 32)] # generic_green_thresholds -> index is 1 so code == (1 << 1)
 
 thresholds = [(55, 100,-24, 11, 32, 86),     #1#yellow
-              (29, 100, 29, 127, -128, 127),     #2#red
+              (0, 100, 29, 127, -128, 127),     #2#red
               (39, 100,-51,-12, 10, 57)]      #4#green
 # Codes are or'ed together when "merge=True" for "find_blobs".
 
@@ -127,9 +127,10 @@ while(True):
                 # print("stable!")
                 # print("blob.cx, blob.cy, blob.w, blob.h are: ")
                 # print(blob.cx(), blob.cy(),blob.w(), blob.h())
-                print("distance: ", distance_to_obj(blob.h()))
-                print("horizontal angle: ",h_angle_to_obj(blob.cx())) 
-                print("vertical angle: ",v_angle_to_obj(blob.cy())) 
+                distance = distance_to_obj(blob.h())
+                print("distance: ", round(distance, 3))
+                print("h_angle:  ", h_angle_to_obj(blob.cx())) 
+                print("v_angle:  ", v_angle_to_obj(blob.cy()))
                 #print (buf)
 
             object_x_old = int(blob.cx())
