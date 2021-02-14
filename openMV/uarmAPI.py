@@ -22,8 +22,8 @@ class UarmEnv(SwiftAPI):
         radius=random.uniform(RADIUS_LIMIT[MIN],RADIUS_LIMIT[MAX])
         angle=random.uniform(ANGLE_LIMIT[MIN],ANGLE_LIMIT[MAX])
         height=random.uniform(HEIGHT_LIMIT[MIN],HEIGHT_LIMIT[MAX])
-        print("radius: ",radius, "angle: ",angle,"height: ",height)
-        self.set_polar(radius,angle,height,wait=should_wait)
+        #print("radius: ",radius, "angle: ",angle,"height: ",height)
+        return self.set_polar(radius,angle,height,wait=should_wait)
 
     def compute_reward(self, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
@@ -41,10 +41,7 @@ class UarmEnv(SwiftAPI):
     def step(self, u,is_polar=False):
         lastPos=self.get_polar()
         if not is_polar:
-
             u = self.coordinate_to_angles(u)
-
-
         # clip at maximum positions
         new_u=[sum(x) for x in zip(lastPos,u)]
         if not self.check_pos_is_limit(new_u,is_polar=True):

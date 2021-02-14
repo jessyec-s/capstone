@@ -12,54 +12,65 @@
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
 # An example script using pyopenmv to grab the framebuffer.
-import multiprocessing
 import sys
-import PIL
-import numpy as np
+import time
 import pygame
 import pyopenmv
+import threading
 from time import sleep
 from getobjectblob import blob_script
 from getobjectblob import distance_key
 from getobjectblob import h_angle_key
 from getobjectblob import v_angle_key
-
 from uarmAPI import UarmEnv
-import threading
 
 distance = ""
 h_angle = 0
 v_angle = 0
 camera_event = threading.Event()
 data_ready = threading.Event()
+camera_started = threading.Event()
 
 lock = threading.Lock()
 
 def main() :
     camera_event.clear()
     data_ready.clear()
-
+    camera_started.clear()
     uarm_thread = threading.Thread(target=uarm_exec)
     uarm_thread.start()
     camera_exec()
-
     uarm_thread.join()
+    print("uarm done searching")
 
-def uarm_exec() :
+def uarm_exec():
+    cords = []
     uarm_controller = UarmEnv()
     uarm_controller.waiting_ready() # wait for uarm to connect
-    while True:
-        camera_event.set() # want data from camera
-        data_ready.wait() # wait until camera sets value
+    camera_started.wait() # wait for camera to boot
+    time.sleep(2)
+    camera_event.set()  # want data from camera
+    time.sleep(1)
+    if data_ready.is_set():
         camera_event.clear()
-
         distance_ = distance
-        print("Got distance from camera: ", distance_)
-
-        uarm_controller.ENV_reset(should_wait=True) # here would actually use distance to determine new value?
-        uarm_controller.flush_cmd(wait_stop=True)
-
+        print("Will send over cord to DDPG: ", distance_)
         data_ready.clear()
+        return cords
+    while data_ready.is_set() is False: #camera has not found object
+        # search observation space
+        camera_event.clear()
+        print("about to move")
+        uarm_controller.ENV_reset(should_wait=True)
+        uarm_controller.flush_cmd(wait_stop=True)
+        print("Setting camera event")
+        camera_event.set()
+        time.sleep(0.5)
+    camera_event.clear()
+    distance_ = distance
+    print("Arm received distance: ", distance_)
+    data_ready.clear()
+    return cords
 
 def camera_connect():
     portname = "/dev/cu.usbmodem3172345631381"
@@ -106,7 +117,6 @@ def camera_exec():
     locals()
 
     running, Clock, font = camera_connect()
-
     while running:
         Clock.tick(100)
 
@@ -118,7 +128,7 @@ def camera_exec():
                 break
             except Exception as e:
                 camera_connect()
-
+        camera_started.set()
         if fb != None:
             # create image from RGB888
             image = pygame.image.frombuffer(fb[2].flat[0:], (fb[0], fb[1]), 'RGB')
@@ -135,13 +145,14 @@ def camera_exec():
         tx_len = pyopenmv.tx_buf_len()
         # sleep(0.250)
         if tx_len:
+            # object was found by camera
             if camera_event.is_set() and (data_ready.is_set() is False):
                 buff = pyopenmv.tx_buf(tx_len).decode()
-                if distance_key in buff:
-                    split_buff = str(buff).splitlines()
+                split_buff = str(buff).splitlines()
+                if distance_key in split_buff[0]:
                     global distance
                     distance = split_buff[0]
-                    print("Camera setting distance: ", distance)
+                    print("Camera sending distance: ", distance)
                     data_ready.set()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
