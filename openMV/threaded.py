@@ -16,23 +16,20 @@ import sys
 import time
 import pygame
 import pyopenmv
+import math
 import threading
 from time import sleep
 from getobjectblob import blob_script
-from getobjectblob import distance_key
 from getobjectblob import h_angle_key
-from getobjectblob import v_angle_key
-from getobjectblob import centroid_x_key
-from getobjectblob import centroid_y_key
 from uarmAPI import UarmEnv
 
-distance = ""
-h_angle = 0
-v_angle = 0
+h_angle = 0.0
+v_angle = 0.0
+height_obj=20.0
+
 camera_event = threading.Event()
 data_ready = threading.Event()
 camera_started = threading.Event()
-height_obj=20.0
 lock = threading.Lock()
 
 def main() :
@@ -51,14 +48,6 @@ def uarm_exec():
     uarm_controller.waiting_ready() # wait for uarm to connect
     camera_started.wait() # wait for camera to boot
     time.sleep(2)
-    camera_event.set()  # want data from camera
-    time.sleep(1)
-    if data_ready.is_set():
-        camera_event.clear()
-        distance_ = distance
-        print("Will send over cord to DDPG: ", distance_)
-        data_ready.clear()
-        return cords
     while data_ready.is_set() is False: #camera has not found object
         # search observation space
         camera_event.clear()
@@ -68,8 +57,13 @@ def uarm_exec():
         camera_event.set()
         time.sleep(0.5)
     camera_event.clear()
-    distance_ = distance
-    print("Arm received distance: ", distance_)
+    h_angle_ = h_angle
+    v_angle_ = v_angle
+    [x, y, z] = uarm_controller.get_position()
+    rel_z = z - height_obj
+    distance = math.sqrt(rel_z ** 2 + (rel_z * math.tan(v_angle_ * math.pi/180)) ** 2 +
+                          (rel_z * math.tan(h_angle_ * math.pi/180)) ** 2)
+    print("Arm calculated distance: ", distance)
     data_ready.clear()
     return cords
 
@@ -150,16 +144,11 @@ def camera_exec():
             if camera_event.is_set() and (data_ready.is_set() is False):
                 buff = pyopenmv.tx_buf(tx_len).decode()
                 split_buff = str(buff).splitlines()
-                if distance_key in split_buff[0]:
-                    global distance
-                    #in split packet: 0 is distance token, 2 is centroid x and 4 is centroid y
-                    tok=  split_buff[0].split()
-                    distance = tok[1]
-                    [x,y,z]=uarm_controller.get_position()
-                    centroid_x,centroid_y=tok[3],tok[5]
-                    print("Camera sending distance: ", distance)
-                    distance2=math.sqrt((z-height_obj)**2+centroid_x**2+centroid_y**2)
-                    print("second possible distance",distance2)
+                if h_angle_key in split_buff[0]:
+                    global h_angle, v_angle
+                    tok = split_buff[0].split()
+                    print("tok: ", tok)
+                    h_angle, v_angle = float(tok[1]), float(tok[3])
                     data_ready.set()
 
         for event in pygame.event.get():

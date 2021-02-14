@@ -1,4 +1,3 @@
-distance_key = "distance: "
 h_angle_key = "h_angle: "
 v_angle_key = "v_angle: "
 centroid_x_key = "centroid_x: "
@@ -126,13 +125,9 @@ while(True):
                 red_led.off()
                 green_led.off()
                 # print("stable!")
-                # print("blob.cx, blob.cy, blob.w, blob.h are: ")
-                # print(blob.cx(), blob.cy(),blob.w(), blob.h())
-                distance = distance_to_obj(blob.h())
-                print("distance: ", round(distance, 3),"centroid_x: ",blob.cx(),"centroid_y: ",blob.cy())
-                print("h_angle:  ", round(h_angle_to_obj(blob.cx()), 3))
-                print("v_angle:  ", round(v_angle_to_obj(blob.cy()), 3))
-
+                h_angle = round(h_angle_to_obj(blob.cx()), 3)
+                v_angle = round(v_angle_to_obj(blob.cy()), 3)
+                print("h_angle: ",h_angle," v_angle: ", v_angle)
             object_x_old = int(blob.cx())
             object_y_old = int(blob.cy())
         else:
