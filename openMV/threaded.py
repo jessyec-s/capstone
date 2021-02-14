@@ -63,8 +63,7 @@ def uarm_exec():
         # search observation space
         camera_event.clear()
         print("about to move")
-        uarm_controller.ENV_reset(should_wait=True)
-        uarm_controller.flush_cmd(wait_stop=True)
+        uarm_controller.seek()
         print("Setting camera event")
         camera_event.set()
         time.sleep(0.5)
