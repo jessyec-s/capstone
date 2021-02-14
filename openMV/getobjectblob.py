@@ -1,7 +1,8 @@
 distance_key = "distance: "
-h_angle_key = "horizontal angle: "
-v_angle_key = "vertical angle: "
-
+h_angle_key = "h_angle: "
+v_angle_key = "v_angle: "
+centroid_x_key = "centroid_x: "
+centroid_y_key = "centroid_y: "
 blob_script="""# #Single Color Code Tracking Example
 #
 # This example shows off single color code tracking using the OpenMV Cam.
@@ -128,10 +129,9 @@ while(True):
                 # print("blob.cx, blob.cy, blob.w, blob.h are: ")
                 # print(blob.cx(), blob.cy(),blob.w(), blob.h())
                 distance = distance_to_obj(blob.h())
-                print("distance: ", round(distance, 3))
+                print("distance: ", round(distance, 3),"centroid_x: ",blob.cx(),"centroid_y: ",blob.cy())
                 print("h_angle:  ", round(h_angle_to_obj(blob.cx()), 3))
                 print("v_angle:  ", round(v_angle_to_obj(blob.cy()), 3))
-                #print (buf)
 
             object_x_old = int(blob.cx())
             object_y_old = int(blob.cy())

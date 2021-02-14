@@ -22,6 +22,8 @@ from getobjectblob import blob_script
 from getobjectblob import distance_key
 from getobjectblob import h_angle_key
 from getobjectblob import v_angle_key
+from getobjectblob import centroid_x_key
+from getobjectblob import centroid_y_key
 from uarmAPI import UarmEnv
 
 distance = ""
@@ -30,7 +32,7 @@ v_angle = 0
 camera_event = threading.Event()
 data_ready = threading.Event()
 camera_started = threading.Event()
-
+height_obj=20.0
 lock = threading.Lock()
 
 def main() :
@@ -151,9 +153,16 @@ def camera_exec():
                 split_buff = str(buff).splitlines()
                 if distance_key in split_buff[0]:
                     global distance
-                    distance = split_buff[0]
+                    #in split packet: 0 is distance token, 2 is centroid x and 4 is centroid y
+                    tok=  split_buff[0].split()
+                    distance = tok[1]
+                    [x,y,z]=uarm_controller.get_position()
+                    centroid_x,centroid_y=tok[3],tok[5]
                     print("Camera sending distance: ", distance)
+                    distance2=math.sqrt((z-height_obj)**2+centroid_x**2+centroid_y**2)
+                    print("second possible distance",distance2)
                     data_ready.set()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                  running = False
