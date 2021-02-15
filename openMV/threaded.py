@@ -42,6 +42,7 @@ def main() :
     uarm_thread.join()
     print("uarm done searching")
 
+
 def uarm_exec():
     cords = []
     uarm_controller = UarmEnv()
@@ -49,7 +50,6 @@ def uarm_exec():
     camera_started.wait() # wait for camera to boot
     time.sleep(2)
     while data_ready.is_set() is False: #camera has not found object
-        # search observation space
         camera_event.clear()
         print("about to move")
         uarm_controller.seek()
@@ -57,15 +57,10 @@ def uarm_exec():
         camera_event.set()
         time.sleep(0.5)
     camera_event.clear()
-    h_angle_ = h_angle
-    v_angle_ = v_angle
-    [x, y, z] = uarm_controller.get_position()
-    rel_z = z - height_obj
-    distance = math.sqrt(rel_z ** 2 + (rel_z * math.tan(v_angle_ * math.pi/180)) ** 2 +
-                          (rel_z * math.tan(h_angle_ * math.pi/180)) ** 2)
-    print("Arm calculated distance: ", distance)
+    uarm_controller.calc_object_cords(h_angle, v_angle)
     data_ready.clear()
     return cords
+
 
 def camera_connect():
     portname = "/dev/cu.usbmodem3172345631381"

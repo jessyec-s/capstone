@@ -15,7 +15,7 @@ from pyb import LED
 
 # Distance Constants
 lens_mm = 2.8 # standard lens
-height_obj_mm = 17.0
+height_obj_mm = 20.0
 image_height_pixels = 240
 image_width_pixels = 340
 sensor_w_mm = 3.984

@@ -1,12 +1,17 @@
 from uarm.wrapper import SwiftAPI
 import numpy as np
 import random
+import math
 
-MIN=0
-MAX=1
-RADIUS_LIMIT=(150.,250.)
-ANGLE_LIMIT=(0.,180.)
-HEIGHT_LIMIT=(0.,150.)
+MIN = 0
+MAX = 1
+RADIUS_LIMIT = (150., 250.)
+ANGLE_LIMIT = (0., 180.)
+HEIGHT_LIMIT = (0., 150.)
+
+OBJECT_HEIGHT = 20  # mm
+CAMERA_Z_OFFSET = 37
+CAMERA_Y_OFFSET = 40
 
 
 def goal_distance(goal_a, goal_b):
@@ -14,29 +19,84 @@ def goal_distance(goal_a, goal_b):
     return np.linalg.norm(goal_a - goal_b, axis=-1)
 
 
+class ObservationSpace:
+    def __init__(self):
+        self.object_pos = [] # in cartesian coordinates
+        self.object_rel_pos = []
+        self.suction_state = False
+
+    def get_data(self):
+        data = dict()
+        data["object_pos"] = self.object_pos
+        data["object_rel_pos"] = self.object_rel_pos
+        data["suction_state"] = int(self.suction_state)
+        return data
+
+    def get_object_pos(self):
+        return self.object_pos
+
+    def set_object_pos(self, pos):
+        self.object_pos = pos
+
+    def update_object_rel(self, uarm_pos):
+        # TODO make sure this subtraction is in the right order
+        x = uarm_pos[0] - self.object_pos[0]
+        y = uarm_pos[1] - self.object_pos[1]
+        z = uarm_pos[2] - self.object_pos[2]
+        self.object_pos = [x, y, z]
+
+    def set_suction_state(self, state):
+        self.suction_state = state
+
+
 class UarmEnv(SwiftAPI):
     def __init__(self, port=None, baudrate=115200, timeout=None, **kwargs):
         super().__init__(port=None, baudrate=115200, timeout=None, **kwargs)
         self.toggle_dir = False
+        self.obs_space = ObservationSpace()
 
     def init(self, port=None, baudrate=115200, timeout=10, **kwargs):
         super(self, port='/dev/cu.usbmodem142401', baudrate=115200, timeout=20, **kwargs)
 
     def ENV_reset(self, should_wait=False):
-        radius=random.uniform(RADIUS_LIMIT[MIN],RADIUS_LIMIT[MAX])
-        angle=random.uniform(ANGLE_LIMIT[MIN],ANGLE_LIMIT[MAX])
-        height=random.uniform(HEIGHT_LIMIT[MIN],HEIGHT_LIMIT[MAX])
-        print("ENV_RESET: radius: ",radius, "angle: ",angle,"height: ",height)
-        return self.set_polar(radius,angle,height,wait=should_wait)
+        radius = random.uniform(RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
+        angle = random.uniform(ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
+        height = random.uniform(HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
+        print("ENV_RESET: radius: ", radius, "angle: ", angle, "height: ", height)
+        return self.set_polar(radius, angle, height, wait=should_wait)
+
+    def calc_distance_to_object(self, cam_h_angle, cam_v_angle):
+        coord = self.get_position()
+        print("CORD: ", coord)
+        if coord is None:
+            print("Error getting robot's position")
+            return
+        rel_z = coord[2] - OBJECT_HEIGHT + CAMERA_Z_OFFSET
+        distance = math.sqrt(rel_z ** 2 + (rel_z * math.tan(cam_v_angle * math.pi / 180)) ** 2
+                             + (rel_z * math.tan(cam_h_angle * math.pi / 180)) ** 2)
+        print("distance to object: ", distance)
+        return distance
+
+    def calc_object_cords(self, cam_h_angle, cam_v_angle):
+        coord = self.get_position()
+        if coord is None:
+            print("Error getting robot's position")
+            return
+        rel_z = coord[2] - OBJECT_HEIGHT + CAMERA_Z_OFFSET
+        y = rel_z * math.tan(cam_v_angle * math.pi / 180) + coord[1] + CAMERA_Y_OFFSET
+        x = rel_z * math.tan(cam_h_angle * math.pi / 180) + coord[0]
+
+        self.obs_space.set_object_pos([x, y, OBJECT_HEIGHT])
+        print("Setting object position to: ", [x, y, OBJECT_HEIGHT])
 
     def compute_reward(self, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
         d = goal_distance(achieved_goal, goal)
         return -(d > self.distance_threshold).astype(np.float32)
 
-
-    def get_camera_data(self):
-        pass
+    def do_suction(self, do_suction):
+        self.obs_space.set_suction_state(True)
+        self.set_pump(on=do_suction, wait=True)
 
     def is_success(self, achieved_goal, desired_goal):
         d = goal_distance(achieved_goal, desired_goal)
@@ -70,27 +130,26 @@ class UarmEnv(SwiftAPI):
         elif angle < 30:
             angle = 30
             self.toggle_dir = False
-        returned_value = self.set_polar(radius, angle, height, wait=True)
+        self.set_polar(radius, angle, height, wait=True)
         print("--- Setting new position ---")
         print("radius: ", radius, "angle: ", angle, "height: ", height)
 
-    def step(self, u,is_polar=False):
-        lastPos=self.get_polar()
+    def step(self, u, is_polar=False):
+        lastPos = self.get_polar()
         if not is_polar:
             u = self.coordinate_to_angles(u)
         # clip at maximum positions
-        new_u=[sum(x) for x in zip(lastPos,u)]
-        if not self.check_pos_is_limit(new_u,is_polar=True):
-            new_u[0]=np.clip(new_u[0],RADIUS_LIMIT[MIN],RADIUS_LIMIT[MAX])
-            new_u[1]=np.clip(new_u[1], ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
-            new_u[2]=np.clip(new_u[2], HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
+        new_u = [sum(x) for x in zip(lastPos, u)]
+        if not self.check_pos_is_limit(new_u, is_polar=True):
+            new_u[0] = np.clip(new_u[0], RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
+            new_u[1] = np.clip(new_u[1], ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
+            new_u[2] = np.clip(new_u[2], HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
 
         # done = self.is_success(new_u,[0,0,0])
         # cost = self.compute_reward(new_u,[0,0,0],)
-        self.set_polar(stretch=new_u[0],rotation=new_u[1],height=new_u[2])
+        self.set_polar(stretch=new_u[0], rotation=new_u[1], height=new_u[2], wait=True)
+        self.obs_space.update_object_rel(self.get_position())
 
-        return {"observation": self.get_polar(),"desiredGoal":self.get_camera_data(),"AchievedGoal":self.get_polar()}
-
-
-
-
+        return {"observation": self.obs_space.get_data(),
+                "desiredGoal": self.obs_space.get_object_pos(),
+                "AchievedGoal": self.get_polar()}
