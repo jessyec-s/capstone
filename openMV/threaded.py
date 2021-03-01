@@ -23,16 +23,27 @@ from getobjectblob import blob_script
 from getobjectblob import h_angle_key
 from uarmAPI import UarmEnv
 
+# target information to be set by camera
 h_angle = 0.0
 v_angle = 0.0
+
+# constants
 height_obj=20.0
 
+# set true by robot when wants information from camera
 camera_event = threading.Event()
+# set true by camera once data has been set to be read by robot
+# set false by robot once data has been read
 data_ready = threading.Event()
+# set true by camera once it has connected
 camera_started = threading.Event()
-lock = threading.Lock()
 
 def main() :
+    '''
+    Main thread:
+        - starts UArm thread
+        - executes camera functionality
+    '''
     camera_event.clear()
     data_ready.clear()
     camera_started.clear()
@@ -44,12 +55,21 @@ def main() :
 
 
 def uarm_exec():
+    '''
+    Main UArm thread
+    Execution Order:
+        1. Robot waits for camera to connect
+        2. Robot seeks space for target object
+        3. Once camera identifies target object location of object is determined
+        4. Return - this step should instead trigger DDPG algorithm
+    '''
     cords = []
     uarm_controller = UarmEnv()
     uarm_controller.waiting_ready() # wait for uarm to connect
     camera_started.wait() # wait for camera to boot
     time.sleep(2)
-    while data_ready.is_set() is False: #camera has not found object
+    while data_ready.is_set() is False:
+        # camera has not found object
         camera_event.clear()
         print("about to move")
         uarm_controller.seek()
@@ -59,15 +79,22 @@ def uarm_exec():
     camera_event.clear()
     uarm_controller.calc_object_cords(h_angle, v_angle)
     data_ready.clear()
+
+    # TODO: trigger DDPG algorithm
     return cords
 
 
 def camera_connect():
+    '''
+    Camera connection loop
+    '''
+
     portname = "/dev/cu.usbmodem3172345631381"
 
     connected = False
 
     pyopenmv.disconnect()
+    # try and connect
     for i in range(10):
 
         try:
@@ -99,6 +126,13 @@ def camera_connect():
     return running, Clock, font
 
 def camera_exec():
+    '''
+    Main camera execution
+    1. Camera tries to connect continuously until successful
+    2. Camera outputs frame buffer -> video stream
+    3. Camera outputs text buffer -> data about target object
+        - Data is passed to robot for evalution
+    '''
     pygame.init()
     # if len(sys.argv)!= 2:
     #     print ('usage: pyopenmv_fb.py <serial port>')
@@ -117,6 +151,7 @@ def camera_exec():
                 fb = pyopenmv.fb_dump()
                 break
             except Exception as e:
+                # try and reconnect on failure
                 camera_connect()
         camera_started.set()
         if fb != None:
@@ -137,13 +172,17 @@ def camera_exec():
         if tx_len:
             # object was found by camera
             if camera_event.is_set() and (data_ready.is_set() is False):
+                # robot wants information and global values have not been updated yet
                 buff = pyopenmv.tx_buf(tx_len).decode()
                 split_buff = str(buff).splitlines()
                 if h_angle_key in split_buff[0]:
+                    # Most recent line in buff contains needed information
                     global h_angle, v_angle
                     tok = split_buff[0].split()
                     print("tok: ", tok)
+                    # set angles to corresponding values determined by camera
                     h_angle, v_angle = float(tok[1]), float(tok[3])
+                    # signal that global variables have been set
                     data_ready.set()
 
         for event in pygame.event.get():
