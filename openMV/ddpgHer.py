@@ -1,6 +1,8 @@
-from stable_baselines import HER, DDPG
-from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
+from stable_baselines import HER
+from stable_baselines.ddpg import DDPG
+# from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
 # from stable_baselines.common.bit_flipping_env import BitFlippingEnv
+import numpy as np
 
 class DDPG_HER:
     def __init__(self, env, model_class=DDPG):
@@ -11,6 +13,10 @@ class DDPG_HER:
         self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4, goal_selection_strategy=self.goal_selection_strategy, verbose=1)
 
     def run(self):
+        obs = self.env.get_observation()
+        # print("OBS: ", obs)
+        # print("np.array(obs).shape: ", obs.shape)
+        # print("observation_space: ", self.env.observation_space)
         # Train the model
         self.model.learn(1000)
 
@@ -22,6 +28,7 @@ class DDPG_HER:
 
         # obs = self.env.reset()
         obs = self.env.get_observation()
+        print("OBS: ", obs)
         for _ in range(100):
             action, _ = self.model.predict(obs)
 

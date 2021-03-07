@@ -84,10 +84,13 @@ def ddpg_loop():
     ddpg_her = DDPG_HER(env=uarm_controller)
 
     while True:
-        uarm_controller.reset_env()
+        print("AT TOP OF WHILE LOOP")
+        uarm_controller.reset()
         uarm_seek(uarm_controller)
         # call ddpg -- should exit when object is found
+        print("Found block")
         ddpg_her.run()
+        print("Finished ddpg_her")
 
         time.sleep(3)
 
@@ -186,10 +189,11 @@ def camera_exec():
                     # Most recent line in buff contains needed information
                     global h_angle, v_angle
                     tok = split_buff[0].split()
-                    print("tok: ", tok)
+                    # print("tok: ", tok)
                     # set angles to corresponding values determined by camera
                     h_angle, v_angle = float(tok[1]), float(tok[3])
                     # signal that global variables have been set
+                    print("Setting data_ready")
                     data_ready.set()
 
         for event in pygame.event.get():

@@ -18,7 +18,8 @@ CAMERA_Y_OFFSET = 40
 
 class UarmEnv(SwiftAPI, gym.GoalEnv):
     def __init__(self, port=None, baudrate=115200, timeout=None, **kwargs):
-        super().__init__(port=None, baudrate=115200, timeout=None, **kwargs)
+        super(UarmEnv, self).__init__()
+        # super().__init__(port=None, baudrate=115200, timeout=None, **kwargs)
         self.toggle_dir = False
         self.distance_threshold = 0.05
 
@@ -27,16 +28,25 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         self.suction_state = False
         self.suction_pos = []
 
-        # Define action and observation space
-        self.action_space = spaces.Tuple(
-            (spaces.Box(low=RADIUS_LIMIT[0], high=RADIUS_LIMIT[1]),  # Radius
-             spaces.Box(low=ANGLE_LIMIT[0], high=ANGLE_LIMIT[1]),  # Angle
-             spaces.Box(low=HEIGHT_LIMIT[0], high=HEIGHT_LIMIT[1])))  # Height
+        # env_action_spaces = {
+        #     'radius': spaces.Box(low=RADIUS_LIMIT[0], high=RADIUS_LIMIT[1], shape=(1,), dtype=np.float32),
+        #     'angle': spaces.Box(low=ANGLE_LIMIT[0], high=ANGLE_LIMIT[1], shape=(1,), dtype=np.float32),
+        #     'height': spaces.Box(low=HEIGHT_LIMIT[0], high=HEIGHT_LIMIT[1], shape=(1,), dtype=np.float32),
+        # }
+        # dict_action_space = gym.spaces.Dict(env_action_spaces)
 
-        self.observation_space = spaces.Tuple(
-            (spaces.Box(low=RADIUS_LIMIT[0], high=RADIUS_LIMIT[1]),  # Radius
-             spaces.Box(low=ANGLE_LIMIT[0], high=ANGLE_LIMIT[1]),  # Angle
-             spaces.Box(low=HEIGHT_LIMIT[0], high=HEIGHT_LIMIT[1])))  # Height
+        # Define action and observation space
+        # TODO: not sure if the shape here is the right value
+        # self.action_space = dict_action_space
+        self.action_space = spaces.Box(-1., 1., shape=(4,), dtype='float32')
+
+        obs = self.get_observation()
+
+        self.observation_space = spaces.Dict(dict(
+            desired_goal=spaces.Box(-np.inf, np.inf, shape=(3,), dtype='float32'),
+            achieved_goal=spaces.Box(-np.inf, np.inf, shape=(3,), dtype='float32'),
+            observation=spaces.Box(-np.inf, np.inf, shape=obs['observation'].shape, dtype='float32'),
+        ))
 
     def init(self, port=None, baudrate=115200, timeout=10, **kwargs):
         super(self, port='/dev/cu.usbmodem142401', baudrate=115200, timeout=20, **kwargs)
@@ -48,8 +58,8 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         print("ENV_RESET: radius: ", radius, "angle: ", angle, "height: ", height)
         return self.set_polar(radius, angle, height, wait=should_wait)
 
-    def reset_env(self):
-        SwiftAPI.reset()
+    def reset(self):
+        SwiftAPI.reset(self)
         self.do_suction(False)
         self.object_pos = []  # in cartesian coordinates
         self.object_rel_pos = []
@@ -153,13 +163,13 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
 
     def get_observation(self):
         obs = np.concatenate([
-            self.object_pos, self.object_rel_pos, self.suction_state, self.suction_pos,
+            self.object_pos, self.object_rel_pos, [self.suction_state], self.suction_pos,
         ])
 
         return {
             'observation': obs.copy(),
-            'achieved_goal': self.get_polar().copy(),
-            'desired_goal': self.object_pos.copy(),
+            'achieved_goal': np.array(self.get_polar()),
+            'desired_goal': np.array(self.object_pos),
         }
 
     def get_object_pos(self):
