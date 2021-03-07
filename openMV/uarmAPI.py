@@ -2,6 +2,8 @@ from uarm.wrapper import SwiftAPI
 import numpy as np
 import random
 import math
+import gym
+from gym import spaces
 
 MIN = 0
 MAX = 1
@@ -14,56 +16,45 @@ CAMERA_Z_OFFSET = 37
 CAMERA_Y_OFFSET = 40
 
 
-def goal_distance(goal_a, goal_b):
-    assert len(goal_a) == len(goal_b)
-    return np.linalg.norm(goal_a - goal_b, axis=-1)
-
-
-class ObservationSpace:
-    def __init__(self):
-        self.object_pos = [] # in cartesian coordinates
-        self.object_rel_pos = []
-        self.suction_state = False
-
-    def get_data(self):
-        data = dict()
-        data["object_pos"] = self.object_pos
-        data["object_rel_pos"] = self.object_rel_pos
-        data["suction_state"] = int(self.suction_state)
-        return data
-
-    def get_object_pos(self):
-        return self.object_pos
-
-    def set_object_pos(self, pos):
-        self.object_pos = pos
-
-    def update_object_rel(self, uarm_pos):
-        # TODO make sure this subtraction is in the right order
-        x = uarm_pos[0] - self.object_pos[0]
-        y = uarm_pos[1] - self.object_pos[1]
-        z = uarm_pos[2] - self.object_pos[2]
-        self.object_pos = [x, y, z]
-
-    def set_suction_state(self, state):
-        self.suction_state = state
-
-
-class UarmEnv(SwiftAPI):
+class UarmEnv(SwiftAPI, gym.GoalEnv):
     def __init__(self, port=None, baudrate=115200, timeout=None, **kwargs):
         super().__init__(port=None, baudrate=115200, timeout=None, **kwargs)
         self.toggle_dir = False
-        self.obs_space = ObservationSpace()
+        self.distance_threshold = 0.05
+
+        self.object_pos = []  # in cartesian coordinates
+        self.object_rel_pos = []
+        self.suction_state = False
+        self.suction_pos = []
+
+        # Define action and observation space
+        self.action_space = spaces.Tuple(
+            (spaces.Box(low=RADIUS_LIMIT[0], high=RADIUS_LIMIT[1]),  # Radius
+             spaces.Box(low=ANGLE_LIMIT[0], high=ANGLE_LIMIT[1]),  # Angle
+             spaces.Box(low=HEIGHT_LIMIT[0], high=HEIGHT_LIMIT[1])))  # Height
+
+        self.observation_space = spaces.Tuple(
+            (spaces.Box(low=RADIUS_LIMIT[0], high=RADIUS_LIMIT[1]),  # Radius
+             spaces.Box(low=ANGLE_LIMIT[0], high=ANGLE_LIMIT[1]),  # Angle
+             spaces.Box(low=HEIGHT_LIMIT[0], high=HEIGHT_LIMIT[1])))  # Height
 
     def init(self, port=None, baudrate=115200, timeout=10, **kwargs):
         super(self, port='/dev/cu.usbmodem142401', baudrate=115200, timeout=20, **kwargs)
 
-    def ENV_reset(self, should_wait=False):
+    def UArm_reset(self, should_wait=False):
         radius = random.uniform(RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
         angle = random.uniform(ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
         height = random.uniform(HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
         print("ENV_RESET: radius: ", radius, "angle: ", angle, "height: ", height)
         return self.set_polar(radius, angle, height, wait=should_wait)
+
+    def reset_env(self):
+        SwiftAPI.reset()
+        self.do_suction(False)
+        self.object_pos = []  # in cartesian coordinates
+        self.object_rel_pos = []
+        self.suction_state = False
+        return self.get_observation()  # reward, done, info can't be included
 
     def calc_distance_to_object(self, cam_h_angle, cam_v_angle):
         coord = self.get_position()
@@ -86,7 +77,8 @@ class UarmEnv(SwiftAPI):
         y = rel_z * math.tan(cam_v_angle * math.pi / 180) + coord[1] + CAMERA_Y_OFFSET
         x = rel_z * math.tan(cam_h_angle * math.pi / 180) + coord[0]
 
-        self.obs_space.set_object_pos([x, y, OBJECT_HEIGHT])
+        # TODO: maybe convert to polar
+        self.object_pos = [x, y, OBJECT_HEIGHT]
         print("Setting object position to: ", [x, y, OBJECT_HEIGHT])
 
     def compute_reward(self, achieved_goal, goal, info):
@@ -95,7 +87,7 @@ class UarmEnv(SwiftAPI):
         return -(d > self.distance_threshold).astype(np.float32)
 
     def do_suction(self, do_suction):
-        self.obs_space.set_suction_state(True)
+        self.set_suction_state(True)
         self.set_pump(on=do_suction, wait=True)
 
     def is_success(self, achieved_goal, desired_goal):
@@ -145,11 +137,49 @@ class UarmEnv(SwiftAPI):
             new_u[1] = np.clip(new_u[1], ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
             new_u[2] = np.clip(new_u[2], HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
 
-        # done = self.is_success(new_u,[0,0,0])
-        # cost = self.compute_reward(new_u,[0,0,0],)
         self.set_polar(stretch=new_u[0], rotation=new_u[1], height=new_u[2], wait=True)
-        self.obs_space.update_object_rel(self.get_position())
+        self.update_object_rel(self.get_position())
 
-        return {"observation": self.obs_space.get_data(),
-                "desiredGoal": self.obs_space.get_object_pos(),
-                "AchievedGoal": self.get_polar()}
+        desired_goal = self.object_pos
+        achieved_goal = self.get_polar()
+
+        return self.get_observation(), self.compute_reward(achieved_goal, desired_goal), self.is_success(achieved_goal, desired_goal)
+
+    def render(self, mode='human'):
+        pass
+
+    def close(self):
+        pass
+
+    def get_observation(self):
+        obs = np.concatenate([
+            self.object_pos, self.object_rel_pos, self.suction_state, self.suction_pos,
+        ])
+
+        return {
+            'observation': obs.copy(),
+            'achieved_goal': self.get_polar().copy(),
+            'desired_goal': self.object_pos.copy(),
+        }
+
+    def get_object_pos(self):
+        return self.object_pos
+
+    def set_object_pos(self, pos):
+        # maybe convert to polar
+        self.object_pos = pos
+
+    def update_object_rel(self, uarm_pos):
+        # TODO make sure this subtraction is in the right order
+        x = uarm_pos[0] - self.object_pos[0]
+        y = uarm_pos[1] - self.object_pos[1]
+        z = uarm_pos[2] - self.object_pos[2]
+        self.object_pos = [x, y, z]
+
+    def set_suction_state(self, state):
+        self.suction_state = state
+
+    def goal_distance(goal_a, goal_b):
+        assert len(goal_a) == len(goal_b)
+        return np.linalg.norm(goal_a - goal_b, axis=-1)
+

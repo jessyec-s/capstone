@@ -22,6 +22,7 @@ from time import sleep
 from getobjectblob import blob_script
 from getobjectblob import h_angle_key
 from uarmAPI import UarmEnv
+from ddpgHer import DDPG_HER
 
 # target information to be set by camera
 h_angle = 0.0
@@ -77,10 +78,17 @@ def ddpg_loop():
     uarm_controller.waiting_ready() # wait for uarm to connect
     camera_started.wait() # wait for camera to boot
     time.sleep(2)
+    uarm_controller.UArm_reset()
+
+    #instantiate DDPG_HER class
+    ddpg_her = DDPG_HER(env=uarm_controller)
 
     while True:
+        uarm_controller.reset_env()
         uarm_seek(uarm_controller)
         # call ddpg -- should exit when object is found
+        ddpg_her.run()
+
         time.sleep(3)
 
 def camera_connect():
