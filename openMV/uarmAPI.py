@@ -83,7 +83,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
 
     def compute_reward(self, achieved_goal, goal, info):
         # Compute distance between goal and the achieved goal.
-        d = goal_distance(achieved_goal, goal)
+        d = self.goal_distance(achieved_goal, goal)
         return -(d > self.distance_threshold).astype(np.float32)
 
     def do_suction(self, do_suction):
@@ -91,7 +91,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         self.set_pump(on=do_suction, wait=True)
 
     def is_success(self, achieved_goal, desired_goal):
-        d = goal_distance(achieved_goal, desired_goal)
+        d = self.goal_distance(achieved_goal, desired_goal)
         return (d < self.distance_threshold).astype(np.float32)
 
     def seek(self):
@@ -179,7 +179,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
     def set_suction_state(self, state):
         self.suction_state = state
 
-    def goal_distance(goal_a, goal_b):
+    def goal_distance(self, goal_a, goal_b):
         assert len(goal_a) == len(goal_b)
         return np.linalg.norm(goal_a - goal_b, axis=-1)
 
