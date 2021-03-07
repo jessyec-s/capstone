@@ -47,27 +47,19 @@ def main() :
     camera_event.clear()
     data_ready.clear()
     camera_started.clear()
-    uarm_thread = threading.Thread(target=uarm_exec)
-    uarm_thread.start()
+    ddpg_thread = threading.Thread(target=ddpg_loop)
+    ddpg_thread.start()
     camera_exec()
-    uarm_thread.join()
+    ddpg_thread.join()
     print("uarm done searching")
 
-
-def uarm_exec():
+def uarm_seek(uarm_controller):
     '''
-    Main UArm thread
-    Execution Order:
-        1. Robot waits for camera to connect
-        2. Robot seeks space for target object
-        3. Once camera identifies target object location of object is determined
-        4. Return - this step should instead trigger DDPG algorithm
+       Uarm object seek
+           1. Robot waits for camera to connect
+           2. Robot seeks space for target object
+           3. Once camera identifies target object location of object is determined
     '''
-    cords = []
-    uarm_controller = UarmEnv()
-    uarm_controller.waiting_ready() # wait for uarm to connect
-    camera_started.wait() # wait for camera to boot
-    time.sleep(2)
     while data_ready.is_set() is False:
         # camera has not found object
         camera_event.clear()
@@ -80,9 +72,16 @@ def uarm_exec():
     uarm_controller.calc_object_cords(h_angle, v_angle)
     data_ready.clear()
 
-    # TODO: trigger DDPG algorithm
-    return cords
+def ddpg_loop():
+    uarm_controller = UarmEnv()
+    uarm_controller.waiting_ready() # wait for uarm to connect
+    camera_started.wait() # wait for camera to boot
+    time.sleep(2)
 
+    while True:
+        uarm_seek(uarm_controller)
+        # call ddpg -- should exit when object is found
+        time.sleep(3)
 
 def camera_connect():
     '''
