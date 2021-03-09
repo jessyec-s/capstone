@@ -23,22 +23,14 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         self.toggle_dir = False
         self.distance_threshold = 0.05
 
-        self.object_pos = []  # in cartesian coordinates
-        self.object_rel_pos = []
-        self.suction_state = False
-        self.suction_pos = []
-
-        # env_action_spaces = {
-        #     'radius': spaces.Box(low=RADIUS_LIMIT[0], high=RADIUS_LIMIT[1], shape=(1,), dtype=np.float32),
-        #     'angle': spaces.Box(low=ANGLE_LIMIT[0], high=ANGLE_LIMIT[1], shape=(1,), dtype=np.float32),
-        #     'height': spaces.Box(low=HEIGHT_LIMIT[0], high=HEIGHT_LIMIT[1], shape=(1,), dtype=np.float32),
-        # }
-        # dict_action_space = gym.spaces.Dict(env_action_spaces)
+        self.object_pos = np.zeros(3)  # in cartesian coordinates
+        self.object_rel_pos = np.zeros(3)
+        self.suction_state = np.zeros(1)
+        self.suction_pos = np.zeros(3)
 
         # Define action and observation space
         # TODO: not sure if the shape here is the right value
-        # self.action_space = dict_action_space
-        self.action_space = spaces.Box(-1., 1., shape=(4,), dtype='float32')
+        self.action_space = spaces.Box(-1., 1., shape=(3,), dtype='float32')
 
         obs = self.get_observation()
 
@@ -59,11 +51,12 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         return self.set_polar(radius, angle, height, wait=should_wait)
 
     def reset(self):
-        SwiftAPI.reset(self)
+        self.UArm_reset(True)
         self.do_suction(False)
-        self.object_pos = []  # in cartesian coordinates
-        self.object_rel_pos = []
-        self.suction_state = False
+        # self.object_pos = np.zeros(3)  # in cartesian coordinates
+        self.update_object_rel(self.get_position())
+        self.suction_state = np.zeros(1)
+        print("RESET RETURNS: ", self.get_observation())
         return self.get_observation()  # reward, done, info can't be included
 
     def calc_distance_to_object(self, cam_h_angle, cam_v_angle):
@@ -88,7 +81,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         x = rel_z * math.tan(cam_h_angle * math.pi / 180) + coord[0]
 
         # TODO: maybe convert to polar
-        self.object_pos = [x, y, OBJECT_HEIGHT]
+        self.object_pos = np.array([x, y, OBJECT_HEIGHT])
         print("Setting object position to: ", [x, y, OBJECT_HEIGHT])
 
     def compute_reward(self, achieved_goal, goal, info):
@@ -141,6 +134,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         if not is_polar:
             u = self.coordinate_to_angles(u)
         # clip at maximum positions
+        print("U: ", u)
         new_u = [sum(x) for x in zip(lastPos, u)]
         if not self.check_pos_is_limit(new_u, is_polar=True):
             new_u[0] = np.clip(new_u[0], RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
@@ -163,7 +157,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
 
     def get_observation(self):
         obs = np.concatenate([
-            self.object_pos, self.object_rel_pos, [self.suction_state], self.suction_pos,
+            self.object_pos, self.object_rel_pos, self.suction_state, self.suction_pos,
         ])
 
         return {
@@ -184,7 +178,7 @@ class UarmEnv(SwiftAPI, gym.GoalEnv):
         x = uarm_pos[0] - self.object_pos[0]
         y = uarm_pos[1] - self.object_pos[1]
         z = uarm_pos[2] - self.object_pos[2]
-        self.object_pos = [x, y, z]
+        self.object_rel_pos = np.array([x, y, z])
 
     def set_suction_state(self, state):
         self.suction_state = state
