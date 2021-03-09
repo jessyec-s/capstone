@@ -21,7 +21,8 @@ import threading
 from time import sleep
 from getobjectblob import blob_script
 from getobjectblob import h_angle_key
-from uarmAPI import UarmEnv
+from uarmEnv import UarmEnv
+from uarmController import UarmController
 from ddpgHer import DDPG_HER
 
 # target information to be set by camera
@@ -70,23 +71,24 @@ def uarm_seek(uarm_controller):
         camera_event.set()
         time.sleep(0.5)
     camera_event.clear()
-    uarm_controller.calc_object_cords(h_angle, v_angle)
     data_ready.clear()
+    return uarm_controller.calc_object_cords(h_angle, v_angle)
 
 def ddpg_loop():
-    uarm_controller = UarmEnv()
+    uarm_controller = UarmController()
+    uarm_env = UarmEnv(uarm_controller)
     uarm_controller.waiting_ready() # wait for uarm to connect
     camera_started.wait() # wait for camera to boot
     time.sleep(2)
     uarm_controller.UArm_reset()
 
     #instantiate DDPG_HER class
-    ddpg_her = DDPG_HER(env=uarm_controller)
+    ddpg_her = DDPG_HER(env=uarm_env)
 
     while True:
         print("AT TOP OF WHILE LOOP")
         uarm_controller.reset()
-        uarm_seek(uarm_controller)
+        uarm_env.set_object_pos(uarm_seek(uarm_controller))
         # call ddpg -- should exit when object is found
         print("Found block")
         ddpg_her.run()
