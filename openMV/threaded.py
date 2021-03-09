@@ -80,7 +80,7 @@ def ddpg_loop():
     uarm_controller.waiting_ready() # wait for uarm to connect
     camera_started.wait() # wait for camera to boot
     time.sleep(2)
-    uarm_controller.UArm_reset()
+    uarm_controller.UArm_reset(should_wait=True)
 
     #instantiate DDPG_HER class
     ddpg_her = DDPG_HER(env=uarm_env)

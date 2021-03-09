@@ -37,7 +37,9 @@ class UarmEnv(gym.GoalEnv):
         self.uarm_controller.do_suction(False)
         self.suction_state = False
         # self.object_pos = np.zeros(3)  # in cartesian coordinates
-        self.update_object_rel(self.uarm_controller.get_position())
+        curr_pos = self.uarm_controller.get_position()
+        # self.update_object_rel(curr_pos)
+
         self.suction_state = np.zeros(1)
         print("RESET RETURNS: ", self.get_observation())
         return self.get_observation()  # reward, done, info can't be included
@@ -51,21 +53,22 @@ class UarmEnv(gym.GoalEnv):
         d = self.goal_distance(achieved_goal, desired_goal)
         return (d < self.distance_threshold).astype(np.float32)
 
-    def step(self, u, is_polar=False):
+    def step(self, action):
         lastPos = self.uarm_controller.get_polar()
-        # lastPos = [1, 1, 1]
-        if not is_polar:
-            u = self.uarm_controller.coordinate_to_angles(u)
+        # u = self.uarm_controller.coordinate_to_angles(u)
         # clip at maximum positions
-        print("U: ", u)
-        new_u = [sum(x) for x in zip(lastPos, u)]
-        if not self.uarm_controller.check_pos_is_limit(new_u, is_polar=True):
-            new_u[0] = np.clip(new_u[0], RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
-            new_u[1] = np.clip(new_u[1], ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
-            new_u[2] = np.clip(new_u[2], HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
+        print("ACTION: ", action)
+        for i in range(action.size):
+            action[i] += 10
 
-        self.uarm_controller.set_polar(stretch=new_u[0], rotation=new_u[1], height=new_u[2], wait=True)
-        self.update_object_rel(self.uarm_controller.get_position())
+        new_pos = [sum(x) for x in zip(lastPos, action)]
+        if not self.uarm_controller.check_pos_is_limit(new_pos, is_polar=True):
+            new_pos[0] = np.clip(new_pos[0], RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
+            new_pos[1] = np.clip(new_pos[1], ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
+            new_pos[2] = np.clip(new_pos[2], HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
+
+        self.uarm_controller.set_polar(stretch=new_pos[0], rotation=new_pos[1], height=new_pos[2], wait=True)
+        # self.update_object_rel(self.uarm_controller.get_position())
 
         desired_goal = self.object_pos
         achieved_goal = self.uarm_controller.get_polar()
@@ -80,7 +83,7 @@ class UarmEnv(gym.GoalEnv):
 
     def get_observation(self):
         obs = np.concatenate([
-            self.object_pos, self.object_rel_pos, self.suction_state, self.suction_pos,
+            self.object_pos, self.suction_state, self.suction_pos,
         ])
 
         return {
@@ -108,5 +111,4 @@ class UarmEnv(gym.GoalEnv):
         x = uarm_pos[0] - self.object_pos[0]
         y = uarm_pos[1] - self.object_pos[1]
         z = uarm_pos[2] - self.object_pos[2]
-        self.object_rel_pos = np.array([x, y, z])
-
+        self.object_rel_pos = np.array(self.uarm_controller.coordinate_to_angles(x, y, z))
