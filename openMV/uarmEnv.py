@@ -11,7 +11,7 @@ HEIGHT_LIMIT = (0., 150.)
 class UarmEnv(gym.GoalEnv):
     def __init__(self, uarm_controller, timeout=None, **kwargs):
         super(UarmEnv, self).__init__()
-
+        self.MULT_FACTOR = 0.5
         self.distance_threshold = 0.05
         self.uarm_controller = uarm_controller
 
@@ -58,8 +58,11 @@ class UarmEnv(gym.GoalEnv):
         # u = self.uarm_controller.coordinate_to_angles(u)
         # clip at maximum positions
         print("ACTION: ", action)
-        for i in range(action.size):
-            action[i] += 10
+        action[0] *= self.MULT_FACTOR
+        action[2] *= self.MULT_FACTOR
+
+        # for i in range(action.size):
+        #     action[i] += 10
 
         new_pos = [sum(x) for x in zip(lastPos, action)]
         if not self.uarm_controller.check_pos_is_limit(new_pos, is_polar=True):
