@@ -14,7 +14,9 @@ class DDPG_HER:
         # Available strategies (cf paper): future, final, episode, random
         self.env = env
         self.goal_selection_strategy = 'future'  # equivalent to GoalSelectionStrategy.FUTURE
-        self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4, goal_selection_strategy=self.goal_selection_strategy,buffer_size=1000000,batch_size=256,gamma=.95,random_exploration=.3,actor_lr=1e-3, critic_lr=1e-3, noise_type='normal', noise_std=.2, normalize_observations=True, normalize_returns=False, verbose=1,max_episode_length=50)
+        self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4,
+                         goal_selection_strategy=self.goal_selection_strategy,buffer_size=1000000,
+                         batch_size=256, gamma=.95, learning_rate=1e-3, verbose=1, max_episode_length=50)
 
     def run(self,epochs=500,load_checkpoints=False):
         #obs = self.env.get_observation()

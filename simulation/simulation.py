@@ -15,6 +15,7 @@
 import numpy as np
 import gym
 from gym.envs.robotics.fetch.reach import FetchReachEnv
+from gym.wrappers import TimeLimit
 import time
 #import pygame
 #import pyopenmv
@@ -36,6 +37,7 @@ def ddpg_loop():
 
     #time.sleep(2)
     environment=FetchReachEnv()
+    environment = TimeLimit(environment, max_episode_steps=50)
     #instantiate DDPG_HER class
     ddpg_her = DDPG_HER(env=environment)
     local_success=[]
