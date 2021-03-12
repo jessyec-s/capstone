@@ -22,7 +22,7 @@ class DDPG_HER:
         # Train the model
         if train:
             # 1000 epochs is approximately 50,000 time steps
-            self.model.learn(total_timesteps=(50000 * epochs))
+            self.model.learn(total_timesteps=(50 * epochs))
             self.model.save("./her_bit_env")
 
         # WARNING: you must pass an env
