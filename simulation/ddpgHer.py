@@ -24,7 +24,7 @@ class DDPG_HER:
         # print("np.array(obs).shape: ", obs.shape)
         print("observation_space: ", self.env.observation_space)
         # Train the model
-        self.model.learn(total_timesteps=5000000)
+        self.model.learn(total_timesteps=250000)
         self.model.save("./her_bit_env")
 
         # WARNING: you must pass an env
@@ -35,6 +35,7 @@ class DDPG_HER:
         
         print("OBS: ", obs)
         score=0
+        success_rate = []
         for i in range(1):
             for _ in range(1000):
                 action, _ = self.model.predict(obs)
@@ -46,6 +47,6 @@ class DDPG_HER:
                 if done:
                     return
             print("epoch: ",i) 
-        print("score:", score, "average score:", average_score)
+            print("score:", score, "average score:", score / i)
         
 
