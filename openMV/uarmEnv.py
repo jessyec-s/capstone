@@ -84,6 +84,25 @@ class UarmEnv(gym.GoalEnv):
     def close(self):
         pass
 
+    # radius: 150-250 vs 0.2-0.72
+    # theta: 0-180 vs -90 - 90
+    # z: 0-150 vs 0.324-1 
+    def get_obs_wm(self):
+        obs=self.get_observation()
+        # Reverse
+        obs[0]=(obs[0]-.2)*(.72-.2)/(250-150)+0.2
+        obs[1]=(obs[1]+90)
+        obs[2]=(obs[2])*(1.0-.324)/(150)
+        return obs
+
+    def set_obs_wm(self,obs):
+        # Reverse
+        obs[0]=(obs[0]-0.2)*(250-150)/(.72-.2)+150
+        obs[1]=obs[1]+90
+        obs[2]=(obs[2])*(150)/(1.0-.324)
+        # TODO: Set observation (maybe not needed)
+        # self.set_observation(obs,polar)
+
     def get_observation(self):
         obs = np.concatenate([
             self.object_pos, self.suction_state, self.suction_pos,

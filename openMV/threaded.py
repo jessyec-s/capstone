@@ -91,7 +91,7 @@ def ddpg_loop():
         uarm_env.set_object_pos(uarm_seek(uarm_controller))
         # call ddpg -- should exit when object is found
         print("Found block")
-        ddpg_her.run()
+        ddpg_her.run(train=False)
         print("Finished ddpg_her")
 
         time.sleep(3)
