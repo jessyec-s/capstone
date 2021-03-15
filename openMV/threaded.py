@@ -24,6 +24,7 @@ from getobjectblob import h_angle_key
 from uarmEnv import UarmEnv
 from uarmController import UarmController
 from ddpgHer import DDPG_HER
+from gym.wrappers import TimeLimit
 
 # target information to be set by camera
 h_angle = 0.0
@@ -77,6 +78,7 @@ def uarm_seek(uarm_controller):
 def ddpg_loop():
     uarm_controller = UarmController()
     uarm_env = UarmEnv(uarm_controller)
+    uarm_env = TimeLimit(uarm_env, max_episode_steps=50)
     uarm_controller.waiting_ready() # wait for uarm to connect
     camera_started.wait() # wait for camera to boot
     time.sleep(2)

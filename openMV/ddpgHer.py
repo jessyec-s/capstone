@@ -1,6 +1,7 @@
-from stable_baselines import HER
-from stable_baselines.ddpg import DDPG
-from stable_baselines.her import GoalSelectionStrategy, HERGoalEnvWrapper
+from stable_baselines3 import HER
+from stable_baselines3.ddpg import DDPG
+import time
+from stable_baselines3.her import GoalSelectionStrategy #, HERGoalEnvWrapper
 # from stable_baselines.common.bit_flipping_env import BitFlippingEnv
 import numpy as np
 
@@ -10,7 +11,8 @@ class DDPG_HER:
         # Available strategies (cf paper): future, final, episode, random
         self.env = env
         self.goal_selection_strategy = 'future'  # equivalent to GoalSelectionStrategy.FUTURE
-        self.model = HER('MlpPolicy', HERGoalEnvWrapper(self.env), self.model_class, n_sampled_goal=4, goal_selection_strategy=self.goal_selection_strategy, verbose=1)
+        self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4, goal_selection_strategy=self.goal_selection_strategy,
+                        buffer_size = 1000000, batch_size = 256, gamma = .95, learning_rate = 1e-3, verbose=1,  max_episode_length=50)
 
     def run(self, epochs=5000, train=False):
         obs = self.env.get_observation()
@@ -29,21 +31,26 @@ class DDPG_HER:
         self.model = HER.load('./her_bit_env', env=self.env)
 
         # obs = self.env.reset()
-        obs = self.env.get_observation()
+        obs = self.env.get_observation_simulated()
+
         print("OBS: ", obs)
         success_rate = []
         for i in range(10):
             obs = self.env.reset()
             score = 0
-            for _ in range(1000):
+            for j in range(1000):
+                # obs needs simulated coords
                 action, _ = self.model.predict(obs)
+                print("Action: ", action)
 
                 obs, reward, done, info = self.env.step(action)
                 score += reward
-                success_rate.append(info["is_success"])
+                print(info)
+                # success_rate.append(info["is_success"])
 
                 if done:
                     break
+                time.sleep(1)
                 print("epoch: ", j)
                 print("score:", score, "average score:", score / j)
             print("success rate: ", success_rate.count(True) / len(success_rate))

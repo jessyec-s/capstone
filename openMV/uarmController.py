@@ -23,11 +23,12 @@ class UarmController(SwiftAPI):
         super(self, port='/dev/cu.usbmodem142401', baudrate=115200, timeout=20, **kwargs)
 
     def UArm_reset(self, should_wait=False):
-        radius = random.uniform(RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
-        angle = random.uniform(ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
-        height = random.uniform(HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
-        print("ENV_RESET: radius: ", radius, "angle: ", angle, "height: ", height)
-        return self.set_polar(radius, angle, height, wait=should_wait)
+        # [216.80258237229708, 89.9080001961666, 46.718538609349665]
+        # radius = random.uniform(RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX])
+        # angle = random.uniform(ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
+        # height = random.uniform(HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
+        # print("ENV_RESET: radius: ", radius, "angle: ", angle, "height: ", height)
+        return self.set_polar(216.80258237229708, 89.9080001961666, 46.718538609349665, wait=should_wait)
 
     def calc_distance_to_object(self, cam_h_angle, cam_v_angle):
         coord = self.get_position()
