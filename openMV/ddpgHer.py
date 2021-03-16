@@ -15,8 +15,6 @@ class DDPG_HER:
                         buffer_size = 1000000, batch_size = 256, gamma = .95, learning_rate = 1e-3, verbose=1,  max_episode_length=50)
 
     def run(self, epochs=5000, train=False):
-        obs = self.env.get_observation()
-        print("OBS: ", obs)
         # print("np.array(obs).shape: ", obs.shape)
         print("observation_space: ", self.env.observation_space)
         # Train the model
@@ -41,12 +39,12 @@ class DDPG_HER:
             for j in range(1000):
                 # obs needs simulated coords
                 action, _ = self.model.predict(obs)
-                print("Action: ", action)
 
                 obs, reward, done, info = self.env.step(action)
                 score += reward
-                print(info)
-                # success_rate.append(info["is_success"])
+                # print(info)
+                success_rate.append(done)
+                print("Distance history: ", self.env.distance_history[-1])
 
                 if done:
                     break
