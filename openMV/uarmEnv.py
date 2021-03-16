@@ -22,7 +22,7 @@ class UarmEnv(gym.GoalEnv):
         self.MULT_FACTOR_SIM = 0.05
         self.MULT_FACTOR_R = 9.615
         self.MULT_FACTOR_Z = 11.09
-        self.distance_threshold = 0.05
+        self.distance_threshold = 0.5
         self.uarm_controller = uarm_controller
         self.distance_history = []
 
@@ -83,6 +83,7 @@ class UarmEnv(gym.GoalEnv):
 
         # Convert new pos to polar
         new_pos = convertToPolar(new_pos[0], new_pos[1], new_pos[2])
+        new_pos[1] += 90.
 
         # Clip physical bounds
         if not self.uarm_controller.check_pos_is_limit(new_pos.tolist(), is_polar=True):
@@ -94,6 +95,8 @@ class UarmEnv(gym.GoalEnv):
 
         # if last position and new position are different, move the robot
         lastPos = self.uarm_controller.get_polar()
+        print("last pos: ", lastPos)
+
         if not np.array_equal(lastPos, new_pos):
             self.uarm_controller.set_polar(stretch=new_pos[0], rotation=new_pos[1], height=new_pos[2], wait=True)
         # self.update_object_rel(self.uarm_controller.get_position())
@@ -114,11 +117,15 @@ class UarmEnv(gym.GoalEnv):
     # radius: 150-250 vs 0.2 -> 0.72
     # theta: 0-180 vs -90 -> +90
     # z: 0-150 vs 0.324 -> 1
-    # Physical to Simulated
-    def get_obs_phys_to_sim(self, obs):
+    # Simulated to Phys
+    def get_obs_sim_to_phys(self, x):
+        print("In obs sim to phys")
+        print("obs before: ", obs)
+        obs = x
         obs[0]=(obs[0]-.2)*(250-150)/(.72-.2)+150
         obs[1]=(obs[1]+90)
         obs[2]=(obs[2]-.324)*(150)/(1.0-.324)
+        print("obs after: ", obs)
         return obs
 
     # def set_obs_phys_to_sim(self, x, polar=True):
@@ -129,13 +136,13 @@ class UarmEnv(gym.GoalEnv):
     #     # self.set_observation(obs,polar)
     #     return obs
 
-    # Simulated to Physical
-    def get_obs_sim_to_phys(self, x):
+    # Physical to Simulated
+    def get_obs_phys_to_sim(self, x):
         # Reverse
         obs = x
-        obs[0] = (obs[0] - .2) * (.72 - .2) / (250 - 150) + 0.2
-        obs[1] = (obs[1] + 90)
-        obs[2] = (obs[2]) * (1.0 - .324) / (150)
+        obs[0] = (obs[0] - 150) * (.72 - .2) / (250 - 150) + 0.2
+        obs[1] = (obs[1] - 90)
+        obs[2] = (obs[2]) * (1.0 - .324) / (150) + .324
         return obs
     #
     # def set_obs_sim_to_phys(self, obs):
@@ -146,11 +153,6 @@ class UarmEnv(gym.GoalEnv):
     #     obs[2] = (obs[2]) * (150) / (1.0 - .324)
     # # TODO: Set observation (maybe not needed)
     # self.set_observation(obs,polar)
-
-    # obs = np.concatenate([
-    #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-    #     object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
-    # ])
 
     def get_observation(self):
         current_position = self.get_obs_phys_to_sim(np.array(self.uarm_controller.get_polar()))
@@ -166,20 +168,28 @@ class UarmEnv(gym.GoalEnv):
             'desired_goal': np.array(self.object_pos),
         }
 
+    # obs = np.concatenate([
+    #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
+    #     object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
+    # ])
+
     # Convert simulated coords to physical
     def get_observation_simulated(self):
 
         obj_pos_polar = convertToPolar(self.object_pos[0], self.object_pos[1], self.object_pos[2])
+        obj_pos_polar[1] += 90
         obj_pos_polar = self.get_obs_phys_to_sim(obj_pos_polar)
 
         current_position = self.get_obs_phys_to_sim(np.array(self.uarm_controller.get_polar()))
 
         # convert all to cartesian for use in ddpg
+        obj_pos_polar[1] -= 90
+        current_position[1] -= 90
         obj_pos_cartesian = convertToCartesian(obj_pos_polar[0], obj_pos_polar[1], obj_pos_polar[2])
         current_position_cartesian = convertToCartesian(current_position[0], current_position[1], current_position[2])
 
         obs = np.concatenate([
-            current_position_cartesian, np.zeros(7),
+            current_position_cartesian, obj_pos_cartesian, np.zeros(4),
         ])
 
         observation = {
@@ -187,7 +197,6 @@ class UarmEnv(gym.GoalEnv):
             'achieved_goal': current_position_cartesian,
             'desired_goal': obj_pos_cartesian,
         }
-        print("observation shape: ", observation['observation'].shape)
 
         return observation
 

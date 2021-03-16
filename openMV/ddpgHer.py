@@ -41,6 +41,7 @@ class DDPG_HER:
                 action, _ = self.model.predict(obs)
 
                 obs, reward, done, info = self.env.step(action)
+                print("OBS: ", obs)
                 score += reward
                 # print(info)
                 success_rate.append(done)
