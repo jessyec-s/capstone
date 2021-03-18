@@ -8,6 +8,8 @@ MAX = 1
 RADIUS_LIMIT = (150., 250.)
 ANGLE_LIMIT = (0., 180.)
 HEIGHT_LIMIT = (0., 150.)
+X_OFFSET = 0.8
+Y_OFFSET = 0.75
 
 def convertToPolar(x, y, z):
     return np.array([math.sqrt(x**2 + y**2), math.atan(y/x)*(180/math.pi), z])
@@ -67,8 +69,8 @@ class UarmEnv(gym.GoalEnv):
         lastPos = self.uarm_controller.get_position()
         # u = self.uarm_controller.coordinate_to_angles(u)
         # clip simulated action at maximum positions
-        print("last pos: ", lastPos)
-        print("ACTION start: ", action)
+        print("last pos x, y, z: ", lastPos)
+        print("ACTION start x, y, z: ", action)
 
         action = np.clip(action, -1, 1)
 
@@ -76,13 +78,14 @@ class UarmEnv(gym.GoalEnv):
         action[0] *= self.MULT_FACTOR_R
         action[1] *= self.MULT_FACTOR_R
         action[2] *= self.MULT_FACTOR_Z
-        print("ACTION after scale: ", action)
+        print("ACTION after scale x, y, z: ", action)
 
         # Add action and last position
         new_pos = [sum(x) for x in zip(lastPos, action)]
 
         # Convert new pos to polar
         new_pos = convertToPolar(new_pos[0], new_pos[1], new_pos[2])
+        # To convert physical system default polar axis to standard
         new_pos[1] += 90.
 
         # Clip physical bounds
@@ -91,11 +94,11 @@ class UarmEnv(gym.GoalEnv):
             new_pos[1] = np.clip(new_pos[1], ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX])
             new_pos[2] = np.clip(new_pos[2], HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])
 
-        print("new pos: ", new_pos)
+        print("new pos polar: ", new_pos)
 
         # if last position and new position are different, move the robot
         lastPos = self.uarm_controller.get_polar()
-        print("last pos: ", lastPos)
+        print("last pos polar: ", lastPos)
 
         if not np.array_equal(lastPos, new_pos):
             self.uarm_controller.set_polar(stretch=new_pos[0], rotation=new_pos[1], height=new_pos[2], wait=True)
@@ -106,7 +109,12 @@ class UarmEnv(gym.GoalEnv):
         print("desired goal: ", desired_goal)
         print("achieved goal: ", achieved_goal)
 
-        return self.get_observation_simulated(), self.compute_reward(achieved_goal, desired_goal), self.is_success(achieved_goal, desired_goal), {}
+        simulated_obs = self.get_observation_simulated()
+        print("simulated_obs before offset: ", simulated_obs)
+        simulated_obs = self.addSimulatedOffset(simulated_obs)
+        print("simulated_obs after offset: ", simulated_obs)
+
+        return simulated_obs, self.compute_reward(achieved_goal, desired_goal), self.is_success(achieved_goal, desired_goal), {}
 
     def render(self, mode='human'):
         pass
@@ -120,8 +128,8 @@ class UarmEnv(gym.GoalEnv):
     # Simulated to Phys
     def get_obs_sim_to_phys(self, x):
         print("In obs sim to phys")
-        print("obs before: ", obs)
         obs = x
+        print("obs before: ", obs)
         obs[0]=(obs[0]-.2)*(250-150)/(.72-.2)+150
         obs[1]=(obs[1]+90)
         obs[2]=(obs[2]-.324)*(150)/(1.0-.324)
@@ -178,7 +186,9 @@ class UarmEnv(gym.GoalEnv):
 
         obj_pos_polar = convertToPolar(self.object_pos[0], self.object_pos[1], self.object_pos[2])
         obj_pos_polar[1] += 90
+        print("desired goal in phys system: ", obj_pos_polar)
         obj_pos_polar = self.get_obs_phys_to_sim(obj_pos_polar)
+
 
         current_position = self.get_obs_phys_to_sim(np.array(self.uarm_controller.get_polar()))
 
@@ -189,7 +199,7 @@ class UarmEnv(gym.GoalEnv):
         current_position_cartesian = convertToCartesian(current_position[0], current_position[1], current_position[2])
 
         obs = np.concatenate([
-            current_position_cartesian, obj_pos_cartesian, np.zeros(4),
+            current_position_cartesian, np.zeros(7),
         ])
 
         observation = {
@@ -200,12 +210,22 @@ class UarmEnv(gym.GoalEnv):
 
         return observation
 
+    def addSimulatedOffset(self, simulated_obs):
+        simulated_obs['observation'][0] += X_OFFSET
+        simulated_obs['observation'][1] += Y_OFFSET
+        simulated_obs['achieved_goal'][0] += X_OFFSET
+        simulated_obs['achieved_goal'][1] += Y_OFFSET
+        simulated_obs['desired_goal'][0] += X_OFFSET
+        simulated_obs['desired_goal'][1] += Y_OFFSET
+        return simulated_obs
+
     def get_object_pos(self):
         return self.object_pos
 
     def set_object_pos(self, pos):
+        self.object_pos = np.array([170, 10, 20])
         # maybe convert to polar
-        self.object_pos = pos
+        # self.object_pos = pos
 
     def set_suction_state(self, state):
         self.suction_state = state
