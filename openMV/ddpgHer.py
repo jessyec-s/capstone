@@ -1,9 +1,6 @@
 from stable_baselines3 import HER
 from stable_baselines3.ddpg import DDPG
 import time
-from stable_baselines3.her import GoalSelectionStrategy #, HERGoalEnvWrapper
-# from stable_baselines.common.bit_flipping_env import BitFlippingEnv
-import numpy as np
 
 class DDPG_HER:
     def __init__(self, env, model_class=DDPG):
@@ -28,10 +25,8 @@ class DDPG_HER:
         # TODO: convert the loaded data to the proper dimensions
         self.model = HER.load('./her_bit_env', env=self.env)
 
-        # obs = self.env.reset()
         obs = self.env.get_observation_simulated()
 
-        print("OBS: ", obs)
         success_rate = []
         for i in range(10):
             obs = self.env.reset()
@@ -41,9 +36,8 @@ class DDPG_HER:
                 action, _ = self.model.predict(obs)
 
                 obs, reward, done, info = self.env.step(action)
-                print("OBS: ", obs)
                 score += reward
-                # print(info)
+
                 success_rate.append(done)
                 print("Distance history: ", self.env.distance_history[-1])
 

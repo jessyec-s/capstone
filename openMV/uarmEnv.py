@@ -24,7 +24,7 @@ class UarmEnv(gym.GoalEnv):
         self.MULT_FACTOR_SIM = 0.05
         self.MULT_FACTOR_R = 9.615
         self.MULT_FACTOR_Z = 11.09
-        self.distance_threshold = 0.5
+        self.distance_threshold = 10.0
         self.uarm_controller = uarm_controller
         self.distance_history = []
 
@@ -47,8 +47,6 @@ class UarmEnv(gym.GoalEnv):
         self.uarm_controller.UArm_reset(True)
         self.uarm_controller.do_suction(False)
         self.suction_state = False
-        # self.object_pos = np.zeros(3)  # in cartesian coordinates
-        # self.update_object_rel(curr_pos)
 
         self.suction_state = np.zeros(1)
         print("RESET RETURNS: ", self.get_observation_simulated())
@@ -67,7 +65,6 @@ class UarmEnv(gym.GoalEnv):
 
     def step(self, action):
         lastPos = self.uarm_controller.get_position()
-        # u = self.uarm_controller.coordinate_to_angles(u)
         # clip simulated action at maximum positions
         print("last pos x, y, z: ", lastPos)
         print("ACTION start x, y, z: ", action)
@@ -102,7 +99,6 @@ class UarmEnv(gym.GoalEnv):
 
         if not np.array_equal(lastPos, new_pos):
             self.uarm_controller.set_polar(stretch=new_pos[0], rotation=new_pos[1], height=new_pos[2], wait=True)
-        # self.update_object_rel(self.uarm_controller.get_position())
 
         desired_goal = self.object_pos
         achieved_goal = self.uarm_controller.get_position()
@@ -110,8 +106,7 @@ class UarmEnv(gym.GoalEnv):
         print("achieved goal: ", achieved_goal)
 
         simulated_obs = self.get_observation_simulated()
-        print("simulated_obs before offset: ", simulated_obs)
-        simulated_obs = self.addSimulatedOffset(simulated_obs)
+
         print("simulated_obs after offset: ", simulated_obs)
 
         return simulated_obs, self.compute_reward(achieved_goal, desired_goal), self.is_success(achieved_goal, desired_goal), {}
@@ -136,31 +131,17 @@ class UarmEnv(gym.GoalEnv):
         print("obs after: ", obs)
         return obs
 
-    # def set_obs_phys_to_sim(self, x, polar=True):
-    #     obs = x
-    #     obs[0]=(obs[0]-150)*(.72-.2)/(250-150)+.2
-    #     obs[1]=obs[1]-90
-    #     obs[2]=(obs[2])*(1.0-.324)/(150)+.324
-    #     # self.set_observation(obs,polar)
-    #     return obs
-
     # Physical to Simulated
     def get_obs_phys_to_sim(self, x):
         # Reverse
+        # Phys ploar: [216.80258237229708, 89.9080001961666, 46.718538609349665]
+        # phys converted: [0.79914021, 0.20264068, 0.53455147]
+        # sim: [1.34737272, 0.74912108, 0.53454488]
         obs = x
         obs[0] = (obs[0] - 150) * (.72 - .2) / (250 - 150) + 0.2
         obs[1] = (obs[1] - 90)
         obs[2] = (obs[2]) * (1.0 - .324) / (150) + .324
         return obs
-    #
-    # def set_obs_sim_to_phys(self, obs):
-    #     # Reverse
-    #
-    #     obs[0] = (obs[0] - 0.2) * (250 - 150) / (.72 - .2) + 150
-    #     obs[1] = obs[1] + 90
-    #     obs[2] = (obs[2]) * (150) / (1.0 - .324)
-    # # TODO: Set observation (maybe not needed)
-    # self.set_observation(obs,polar)
 
     def get_observation(self):
         current_position = self.get_obs_phys_to_sim(np.array(self.uarm_controller.get_polar()))
@@ -176,11 +157,6 @@ class UarmEnv(gym.GoalEnv):
             'desired_goal': np.array(self.object_pos),
         }
 
-    # obs = np.concatenate([
-    #     grip_pos, object_pos.ravel(), object_rel_pos.ravel(), gripper_state, object_rot.ravel(),
-    #     object_velp.ravel(), object_velr.ravel(), grip_velp, gripper_vel,
-    # ])
-
     # Convert simulated coords to physical
     def get_observation_simulated(self):
 
@@ -189,12 +165,12 @@ class UarmEnv(gym.GoalEnv):
         print("desired goal in phys system: ", obj_pos_polar)
         obj_pos_polar = self.get_obs_phys_to_sim(obj_pos_polar)
 
-
+        print("Current position in get_obs_simulated: ", self.uarm_controller.get_polar())
         current_position = self.get_obs_phys_to_sim(np.array(self.uarm_controller.get_polar()))
 
         # convert all to cartesian for use in ddpg
-        obj_pos_polar[1] -= 90
-        current_position[1] -= 90
+        # obj_pos_polar[1] -= 90
+        # current_position[1] -= 90
         obj_pos_cartesian = convertToCartesian(obj_pos_polar[0], obj_pos_polar[1], obj_pos_polar[2])
         current_position_cartesian = convertToCartesian(current_position[0], current_position[1], current_position[2])
 
@@ -207,6 +183,8 @@ class UarmEnv(gym.GoalEnv):
             'achieved_goal': current_position_cartesian,
             'desired_goal': obj_pos_cartesian,
         }
+
+        observation = self.addSimulatedOffset(observation)
 
         return observation
 
@@ -223,9 +201,8 @@ class UarmEnv(gym.GoalEnv):
         return self.object_pos
 
     def set_object_pos(self, pos):
-        self.object_pos = np.array([170, 10, 20])
         # maybe convert to polar
-        # self.object_pos = pos
+        self.object_pos = pos
 
     def set_suction_state(self, state):
         self.suction_state = state
