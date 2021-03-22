@@ -47,6 +47,7 @@ class UarmEnv(gym.GoalEnv):
         self.uarm_controller.UArm_reset(True)
         self.uarm_controller.do_suction(False)
         self.suction_state = False
+        self.distance_history = []
 
         self.suction_state = np.zeros(1)
         print("RESET RETURNS: ", self.get_observation_simulated())

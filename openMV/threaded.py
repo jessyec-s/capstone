@@ -25,6 +25,7 @@ from uarmEnv import UarmEnv
 from uarmController import UarmController
 from ddpgHer import DDPG_HER
 from gym.wrappers import TimeLimit
+import matplotlib.pyplot as plt
 
 # target information to be set by camera
 h_angle = 0.0
@@ -40,6 +41,10 @@ camera_event = threading.Event()
 data_ready = threading.Event()
 # set true by camera once it has connected
 camera_started = threading.Event()
+# set true by ddpg algo for plotting
+plot_ready = threading.Event()
+success_rate = []
+distance_history = []
 
 def main() :
     '''
@@ -75,6 +80,22 @@ def uarm_seek(uarm_controller):
     data_ready.clear()
     return uarm_controller.calc_object_cords(h_angle, v_angle)
 
+def plot_distance(distance_history, plot_num):
+    plt.plot(distance_history)
+    plt.title("Arm Distance from Object")
+    plt.ylabel("Distance")
+    plt.xlabel("Number iterations")
+    plt.savefig("./plots/distance/distance_history_{}.png".format(plot_num))
+    plt.clf()
+
+def plot_success(success_rate, plot_num):
+    plt.plot(success_rate)
+    plt.title("Success Rate for FetchReach")
+    plt.ylabel("Success Rate")
+    plt.xlabel("Number iterations")
+    plt.savefig("./plots/success/success_rate_{}.png".format(plot_num))
+    plt.clf()
+
 def ddpg_loop():
     uarm_controller = UarmController()
     uarm_env = UarmEnv(uarm_controller)
@@ -93,10 +114,13 @@ def ddpg_loop():
         uarm_env.set_object_pos(uarm_seek(uarm_controller))
         # call ddpg -- should exit when object is found
         print("Found block")
-        ddpg_her.run(train=False)
+        global distance_history, success_rate
+        success_rate, distance_history = ddpg_her.run(train=False)
         print("Finished ddpg_her")
+        # Send signal to plot success_rate
+        plot_ready.set()
 
-        time.sleep(3)
+        time.sleep(5)
 
 def camera_connect():
     '''
@@ -154,6 +178,7 @@ def camera_exec():
     # portname = sys.argv[1]la
     locals()
 
+    plot_num = 0
     running, Clock, font = camera_connect()
     while running:
         Clock.tick(100)
@@ -199,6 +224,13 @@ def camera_exec():
                     # signal that global variables have been set
                     print("Setting data_ready")
                     data_ready.set()
+
+        if plot_ready.is_set():
+            print("success_rate: ", success_rate)
+            plot_distance(distance_history, plot_num)
+            plot_success(success_rate, plot_num)
+            plot_num += 1
+            plot_ready.clear()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

@@ -28,7 +28,7 @@ class DDPG_HER:
         obs = self.env.get_observation_simulated()
 
         success_rate = []
-        for i in range(10):
+        for i in range(1):
             obs = self.env.reset()
             score = 0
             for j in range(1000):
@@ -47,4 +47,6 @@ class DDPG_HER:
                 print("epoch: ", j)
                 print("score:", score, "average score:", score / j)
             print("success rate: ", success_rate.count(True) / len(success_rate))
+
+        return success_rate, self.env.distance_history
 
