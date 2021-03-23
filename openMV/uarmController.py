@@ -40,12 +40,13 @@ class UarmController(SwiftAPI):
 
     def calc_object_cords(self, cam_h_angle, cam_v_angle):
         coord = self.get_position()
+        # coord_polar = self.get_polar()
         if coord is None:
             print("Error getting robot's position")
             return
         rel_z = coord[2] - OBJECT_HEIGHT + CAMERA_Z_OFFSET
-        y = rel_z * math.tan(cam_v_angle * math.pi / 180) + coord[1] + CAMERA_Y_OFFSET
-        x = rel_z * math.tan(cam_h_angle * math.pi / 180) + coord[0]
+        y = rel_z * math.tan(cam_h_angle * math.pi / 180) + coord[1] + CAMERA_Y_OFFSET
+        x = rel_z * math.tan(cam_v_angle * math.pi / 180) + coord[0]
 
         print("Setting object position to: ", [x, y, OBJECT_HEIGHT])
         return np.array([x, y, OBJECT_HEIGHT])
