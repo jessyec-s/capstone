@@ -12,7 +12,7 @@ HEIGHT_LIMIT = (0., 150.)
 
 OBJECT_HEIGHT = 20  # mm
 CAMERA_Z_OFFSET = 37
-CAMERA_Y_OFFSET = 40
+CAMERA_X_OFFSET = 40
 
 class UarmController(SwiftAPI):
     def __init__(self, port=None, baudrate=115200, timeout=None, **kwargs):
@@ -40,16 +40,24 @@ class UarmController(SwiftAPI):
 
     def calc_object_cords(self, cam_h_angle, cam_v_angle):
         coord = self.get_position()
-        # coord_polar = self.get_polar()
+        print("coord: ", coord)
+        arm_angle_x = math.atan(coord[1]/coord[0]) * 180 / math.pi
+        arm_angle_y = arm_angle_x + 90
+        print("arm_angle_x, arm_angle_y: ", arm_angle_x, arm_angle_y)
         if coord is None:
             print("Error getting robot's position")
             return
         rel_z = coord[2] - OBJECT_HEIGHT + CAMERA_Z_OFFSET
-        y = rel_z * math.tan(cam_h_angle * math.pi / 180) + coord[1] + CAMERA_Y_OFFSET
-        x = rel_z * math.tan(cam_v_angle * math.pi / 180) + coord[0]
+        y = rel_z * math.tan(cam_h_angle * math.pi / 180)
+        x = rel_z * math.tan(cam_v_angle * math.pi / 180) + CAMERA_X_OFFSET
+        print("x, y, rel_z: ", x, y, rel_z)
+        print("h_angle, v_angle: ", cam_h_angle, cam_v_angle)
 
-        print("Setting object position to: ", [x, y, OBJECT_HEIGHT])
-        return np.array([x, y, OBJECT_HEIGHT])
+        y_real = y*math.sin(arm_angle_y * math.pi / 180) + x*math.sin(arm_angle_x * math.pi / 180) + coord[1]
+        x_real = y*math.cos(arm_angle_y * math.pi / 180) + x*math.cos(arm_angle_x * math.pi / 180) + coord[0]
+
+        print("Setting object position to: ", [x_real, y_real, OBJECT_HEIGHT])
+        return np.array([x_real, y_real, OBJECT_HEIGHT])
 
     def do_suction(self, do_suction):
         self.set_pump(on=do_suction, wait=True)
