@@ -27,6 +27,7 @@ class UarmEnv(gym.GoalEnv):
         self.distance_threshold = 10.0
         self.uarm_controller = uarm_controller
         self.distance_history = []
+        self.success_history = []
 
         self.object_pos = np.zeros(3)  # in cartesian coordinates
         self.object_rel_pos = np.zeros(3)

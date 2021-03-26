@@ -11,13 +11,13 @@ class DDPG_HER:
         self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4, goal_selection_strategy=self.goal_selection_strategy,
                         buffer_size = 1000000, batch_size = 256, gamma = .95, learning_rate = 1e-3, verbose=1,  max_episode_length=50)
 
-    def run(self, epochs=5000, train=False):
+    def run(self, train_epochs=5000, train=False):
         # print("np.array(obs).shape: ", obs.shape)
         print("observation_space: ", self.env.observation_space)
         # Train the model
         if train:
             # 1000 epochs is approximately 50,000 time steps
-            self.model.learn(total_timesteps=(50 * epochs))
+            self.model.learn(total_timesteps=(50 * train_epochs))
             self.model.save("./her_bit_env")
 
         # WARNING: you must pass an env
@@ -27,10 +27,10 @@ class DDPG_HER:
 
         obs = self.env.get_observation_simulated()
 
-        success_rate = []
         for i in range(1):
             obs = self.env.reset()
             score = 0
+            self.env.success_history.append(False)
             for j in range(1000):
                 # obs needs simulated coords
                 action, _ = self.model.predict(obs)
@@ -38,7 +38,7 @@ class DDPG_HER:
                 obs, reward, done, info = self.env.step(action)
                 score += reward
 
-                success_rate.append(done)
+                self.env.success_history[-1] = done
                 print("Distance history: ", self.env.distance_history[-1])
 
                 if done:
@@ -46,7 +46,7 @@ class DDPG_HER:
                 time.sleep(1)
                 print("epoch: ", j)
                 print("score:", score, "average score:", score / j)
-            print("success rate: ", success_rate.count(True) / len(success_rate))
+            print("success rate: ", self.env.success_history.count(True) / len(self.env.success_history))
 
-        return success_rate, self.env.distance_history
+        return self.env.success_hsitory, self.env.distance_history
 
