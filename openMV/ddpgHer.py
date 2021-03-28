@@ -31,22 +31,31 @@ class DDPG_HER:
             obs = self.env.reset()
             score = 0
             self.env.success_history.append(False)
+            start = time.time()
             for j in range(1000):
                 # obs needs simulated coords
                 action, _ = self.model.predict(obs)
 
                 obs, reward, done, info = self.env.step(action)
                 score += reward
+                if j != 49:
+                    self.env.success_history[-1] = done
 
-                self.env.success_history[-1] = done
+                # self.env.success_history[-1] = done
                 print("Distance history: ", self.env.distance_history[-1])
+                print("Success history: ", self.env.success_history[-1])
 
                 if done:
+                    end = time.time()
+                    self.env.time_history.append(end-start)
                     break
                 time.sleep(1)
+
                 print("epoch: ", j)
-                print("score:", score, "average score:", score / j)
+                if j != 0:
+                    print("score:", score, "average score:", score / j)
+            print("self.env.success_history[-1]: ", self.env.success_history[-1])
             print("success rate: ", self.env.success_history.count(True) / len(self.env.success_history))
 
-        return self.env.success_hsitory, self.env.distance_history
+        return self.env.success_history, self.env.distance_history, self.env.time_history
 

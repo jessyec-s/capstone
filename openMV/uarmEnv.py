@@ -18,16 +18,22 @@ def convertToCartesian(r, theta, z):
     theta = theta * (math.pi/180)
     return np.array([r*math.cos(theta), r*math.sin(theta), z])
 
+def convertToCartesianRobot(r, theta, z):
+    theta = theta * (math.pi/180)
+    # Need to reverse x and y due to the way it is laid out in the physical system coordinate system
+    return np.array([r*math.sin(theta), -r*math.cos(theta), z])
+
 class UarmEnv(gym.GoalEnv):
     def __init__(self, uarm_controller, timeout=None, **kwargs):
         super(UarmEnv, self).__init__()
         self.MULT_FACTOR_SIM = 0.05
         self.MULT_FACTOR_R = 9.615
         self.MULT_FACTOR_Z = 11.09
-        self.distance_threshold = 10.0
+        self.distance_threshold = 15.0
         self.uarm_controller = uarm_controller
         self.distance_history = []
         self.success_history = []
+        self.time_history = []
 
         self.object_pos = np.zeros(3)  # in cartesian coordinates
         self.object_rel_pos = np.zeros(3)
@@ -55,15 +61,55 @@ class UarmEnv(gym.GoalEnv):
 
         return self.get_observation_simulated()  # reward, done, info can't be included
 
+    # Old reward function- based only on distance calc
+    # def compute_reward(self, achieved_goal, goal):
+    #     # Compute distance between goal and the achieved goal.
+    #     d = self.goal_distance(achieved_goal, goal)
+    #     self.distance_history.append(d)
+    #     return -(d > self.distance_threshold).astype(np.float32)
+
+    # New reward method that is based on difference between the coords + some other penalties
     def compute_reward(self, achieved_goal, goal):
         # Compute distance between goal and the achieved goal.
+        threshold = 11
+        reward = 0
+        print("achieved goal and desired goal:", achieved_goal, goal)
+        print("diff: ", abs(achieved_goal[0] - goal[0]), abs(achieved_goal[1] - goal[1]), abs(achieved_goal[2] - goal[2]))
+        reward += (abs(achieved_goal[0] - goal[0]) <= threshold).astype(np.float32)/3
+        reward += (abs(achieved_goal[1] - goal[1]) <= threshold).astype(np.float32)/3
+        reward += (abs(achieved_goal[2] - goal[2]) <= threshold).astype(np.float32)/3
         d = self.goal_distance(achieved_goal, goal)
+        if len(self.distance_history) > 0:
+            if d >= self.distance_history[-1]:
+                if (abs(d-self.distance_history[-1]) > 100):
+                    reward -= 1
+                else:
+                    reward -= 0.1
+            else:
+                reward += 0.1
+                if d < 20:
+                    reward += 0.1
+        print("reward: ", reward)
         self.distance_history.append(d)
-        return -(d > self.distance_threshold).astype(np.float32)
+        return reward
 
+    # New is_success function based on object coords
     def is_success(self, achieved_goal, desired_goal):
+        # Compute distance between goal and the achieved goal.
+        reward_threshold = 0.1
+        threshold = 10
+        reward = 0
+        reward += (abs(achieved_goal[0] - desired_goal[0]) <= threshold).astype(np.float32)/3
+        reward += (abs(achieved_goal[1] - desired_goal[1]) <= threshold).astype(np.float32)/3
+        reward += (abs(achieved_goal[2] - desired_goal[2]) <= threshold).astype(np.float32)/3
         d = self.goal_distance(achieved_goal, desired_goal)
-        return (d < self.distance_threshold).astype(np.float32)
+        print("is success reward: ", reward)
+        return (abs(reward - 1) <= reward_threshold or (d < self.distance_threshold).astype(np.float32))
+
+    # Old is_success function based on distance
+    # def is_success(self, achieved_goal, desired_goal):
+    #     d = self.goal_distance(achieved_goal, desired_goal)
+    #     return (d < self.distance_threshold).astype(np.float32)
 
     def step(self, action):
         lastPos = self.uarm_controller.get_position()

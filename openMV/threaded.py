@@ -21,11 +21,12 @@ import threading
 from time import sleep
 from getobjectblob import blob_script
 from getobjectblob import h_angle_key
-from uarmEnv import UarmEnv
+from uarmEnv import UarmEnv, convertToCartesianRobot, convertToPolar
 from uarmController import UarmController
 from ddpgHer import DDPG_HER
 from gym.wrappers import TimeLimit
 import matplotlib.pyplot as plt
+from uarmTests import UarmTests
 
 # target information to be set by camera
 h_angle = 0.0
@@ -45,14 +46,19 @@ camera_started = threading.Event()
 plot_ready = threading.Event()
 success_history = []
 distance_history = []
+time_history = []
 
-def main(object_locations=None) :
+def main(run_tests=True) :
     '''
     Main thread:
         - starts UArm thread
         - executes camera functionality
     '''
-    if object_locations:
+    if run_tests:
+        print("Running Tests")
+        tests = UarmTests()
+        object_locations = tests.run_tests()
+        print("Object locations polar: ", object_locations)
         ddpg_loop_no_camera(object_locations)
     else:
         camera_event.clear()
@@ -92,15 +98,34 @@ def plot_distance(distance_history, plot_num):
     plt.clf()
 
 def plot_success(success_rate, plot_num):
-    plt.plot(success_rate)
+    average = []
+    for i, point in enumerate(success_rate):
+        average.append(success_rate[:i+1].count(True) / (i+1))
+    plt.plot(success_rate, color= 'blue', label="Epoch Success Rate")
+    plt.plot(average, color = 'red', label= "Average Success Rate", zorder = 3)
+    plt.legend()
     plt.title("Success Rate for FetchReach")
     plt.ylabel("Success Rate")
     plt.xlabel("Number iterations")
     plt.savefig("./plots/success/success_rate_{}.png".format(plot_num))
     plt.clf()
 
+def plot_time(time_to_complete, plot_num):
+    average = []
+    for i, point in enumerate(time_to_complete):
+        average.append(sum(time_to_complete[:i+1])/ (i+1))
+    plt.plot(time_to_complete, color= 'blue', label="Epoch Time")
+    plt.plot(average, color = 'red', label= "Average Time", zorder = 3)
+    plt.legend()
+    plt.title("Time to complete FetchReach")
+    plt.ylabel("Time (seconds)")
+    plt.xlabel("Number iterations")
+    plt.savefig("./plots/time/time_to_complete_{}.png".format(plot_num))
+    plt.clf()
+
 
 def ddpg_loop_no_camera(obj_locations):
+    print("inside ddpg_loop_no_camera")
     uarm_controller = UarmController()
     uarm_env = UarmEnv(uarm_controller)
     uarm_env = TimeLimit(uarm_env, max_episode_steps=50)
@@ -113,13 +138,17 @@ def ddpg_loop_no_camera(obj_locations):
     for count, obj in enumerate(obj_locations):
         print("AT TOP OF WHILE LOOP")
         uarm_controller.reset()
-        uarm_env.set_object_pos(uarm_env.convertToCartesian(obj[0], obj[1], obj[2]))
+        cartesian_coords = convertToCartesianRobot(obj[0], obj[1], obj[2])
+        print("obj_coords polar: ", obj)
+        print("obj_coords cartesian: ", cartesian_coords)
+        uarm_env.set_object_pos(cartesian_coords)
         # call ddpg -- should exit when object is found
-        suc_history, dis_history = ddpg_her.run(train=False)
+        suc_history, dis_history, time_history = ddpg_her.run(train=False)
         print("Finished ddpg_her")
         # plot success_rate
         plot_success(suc_history, count)
         plot_distance(dis_history, count)
+        plot_time(time_history, count)
         time.sleep(2)
 
 
@@ -141,8 +170,8 @@ def ddpg_loop_with_seek():
         uarm_env.set_object_pos(uarm_seek(uarm_controller))
         # call ddpg -- should exit when object is found
         print("Found block")
-        global distance_history, success_history
-        success_history, distance_history = ddpg_her.run(train=False)
+        global distance_history, success_history, time_history
+        success_history, distance_history, time_history = ddpg_her.run(train=False)
         print("Finished ddpg_her")
         # Send signal to plot success_rate
         plot_ready.set()
