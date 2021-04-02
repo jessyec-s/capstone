@@ -5,7 +5,7 @@ import math
 
 MIN = 0
 MAX = 1
-RADIUS_LIMIT = (150., 250.)
+RADIUS_LIMIT = (150., 300.)
 ANGLE_LIMIT = (0., 180.)
 HEIGHT_LIMIT = (0., 150.)
 X_OFFSET = 0.8
@@ -29,7 +29,7 @@ class UarmEnv(gym.GoalEnv):
         self.MULT_FACTOR_SIM = 0.05
         self.MULT_FACTOR_R = 9.615
         self.MULT_FACTOR_Z = 11.09
-        self.distance_threshold = 15.0
+        self.distance_threshold = 10.0
         self.uarm_controller = uarm_controller
         self.distance_history = []
         self.success_history = []
@@ -173,9 +173,9 @@ class UarmEnv(gym.GoalEnv):
         print("In obs sim to phys")
         obs = x
         print("obs before: ", obs)
-        obs[0]=(obs[0]-.2)*(250-150)/(.72-.2)+150
+        obs[0]=(obs[0]-.2)*(RADIUS_LIMIT[MAX]-RADIUS_LIMIT[MIN])/(.72-.2) + RADIUS_LIMIT[MIN]
         obs[1]=(obs[1]+90)
-        obs[2]=(obs[2]-.324)*(150)/(1.0-.324)
+        obs[2]=(obs[2]-.32)*(HEIGHT_LIMIT[MAX])/(1.0-.32)
         print("obs after: ", obs)
         return obs
 
@@ -186,9 +186,9 @@ class UarmEnv(gym.GoalEnv):
         # phys converted: [0.79914021, 0.20264068, 0.53455147]
         # sim: [1.34737272, 0.74912108, 0.53454488]
         obs = x
-        obs[0] = (obs[0] - 150) * (.72 - .2) / (250 - 150) + 0.2
+        obs[0] = (obs[0] - RADIUS_LIMIT[MIN]) * (.72 - .2) / (RADIUS_LIMIT[MAX] - RADIUS_LIMIT[MIN]) + 0.2
         obs[1] = (obs[1] - 90)
-        obs[2] = (obs[2]) * (1.0 - .324) / (150) + .324
+        obs[2] = (obs[2]) * (1.0 - .32) / (HEIGHT_LIMIT[MAX]) + .32
         return obs
 
     def get_observation(self):

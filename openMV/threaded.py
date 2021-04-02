@@ -31,9 +31,10 @@ from uarmTests import UarmTests
 # target information to be set by camera
 h_angle = 0.0
 v_angle = 0.0
+is_centered = False
 
 # constants
-height_obj=20.0
+height_obj=0.0
 
 # set true by robot when wants information from camera
 camera_event = threading.Event()
@@ -48,7 +49,7 @@ success_history = []
 distance_history = []
 time_history = []
 
-def main(run_tests=True) :
+def main(run_tests=False) :
     '''
     Main thread:
         - starts UArm thread
@@ -77,14 +78,18 @@ def uarm_seek(uarm_controller):
            2. Robot seeks space for target object
            3. Once camera identifies target object location of object is determined
     '''
-    while data_ready.is_set() is False:
+    global is_centered
+    while data_ready.is_set() is False or is_centered is False:
         # camera has not found object
+        if data_ready.is_set():
+            data_ready.clear()
         camera_event.clear()
         print("about to move")
         uarm_controller.seek()
         print("Setting camera event")
         camera_event.set()
-        time.sleep(0.5)
+        time.sleep(1)
+    is_centered = False
     camera_event.clear()
     data_ready.clear()
     return uarm_controller.calc_object_cords(h_angle, v_angle)
@@ -272,11 +277,15 @@ def camera_exec():
                 split_buff = str(buff).splitlines()
                 if h_angle_key in split_buff[0]:
                     # Most recent line in buff contains needed information
-                    global h_angle, v_angle
+                    global h_angle, v_angle, is_centered
                     tok = split_buff[0].split()
                     # print("tok: ", tok)
                     # set angles to corresponding values determined by camera
                     h_angle, v_angle = float(tok[1]), float(tok[3])
+                    if tok[5] == "True":
+                        is_centered = True
+                    else:
+                        is_centered = False
                     # signal that global variables have been set
                     print("Setting data_ready")
                     data_ready.set()

@@ -18,15 +18,16 @@ lens_mm = 2.8 # standard lens
 height_obj_mm = 20.0
 image_height_pixels = 240
 image_width_pixels = 340
+center_threshold = 90
 sensor_w_mm = 3.984
 sensor_h_mm = 2.952
 offset_mm = 100.0 # offset fix
 
-h_fov = 70.8
+h_fov = 53.8
 res_w = 320.0
 deg_per_pix_h=h_fov/res_w
 
-v_fov = 55.6
+v_fov = 45.2
 res_h = 240.0
 deg_per_pix_v=v_fov/res_h
 
@@ -60,7 +61,7 @@ thresholds = [(55, 100,-24, 11, 32, 86),     #1#yellow
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QVGA)
-# sensor.skip_frames(time = 2000)
+sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
 sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
@@ -80,12 +81,13 @@ buf = "00"
 
 while(True):
     clock.tick()
+    img = sensor.snapshot()
+    img.lens_corr(1.8) # strength of 1.8 is good for the 2.8mm lens.
 
     blue_led.off()
     green_led.off()
     red_led.off()
 
-    img = sensor.snapshot()
     for blob in img.find_blobs(thresholds, pixels_threshold=50, area_threshold=50, merge=True):
 
 #check which color should be detected
@@ -120,6 +122,9 @@ while(True):
                 abs(object_y_old - int(blob.cy())) < 8) and (
                 blob.w()>10 and
                 blob.h()>10):
+                
+                at_middle = (abs(blob.cx() - image_width_pixels/2) < center_threshold and abs(blob.cy() - image_height_pixels/2) < center_threshold)
+             
                 #just detect the objects. turn on the blue only
                 # blue_led.on()
                 red_led.off()
@@ -127,7 +132,7 @@ while(True):
                 # print("stable!")
                 h_angle = round(h_angle_to_obj(blob.cx()), 3)
                 v_angle = round(v_angle_to_obj(blob.cy()), 3)
-                print("h_angle: ",h_angle," v_angle: ", v_angle)
+                print("h_angle: ",h_angle," v_angle: ", v_angle, "is_centered: ", at_middle)
             object_x_old = int(blob.cx())
             object_y_old = int(blob.cy())
         else:

@@ -23,7 +23,7 @@ class DDPG_HER:
         # WARNING: you must pass an env
         # or wrap your environment with HERGoalEnvWrapper to use the predict method
         # TODO: convert the loaded data to the proper dimensions
-        self.model = HER.load('./her_bit_env', env=self.env)
+        self.model = HER.load('./her_bit_env_new', env=self.env)
 
         obs = self.env.get_observation_simulated()
 
