@@ -1,9 +1,6 @@
 from stable_baselines3 import HER
 from stable_baselines3.ddpg import DDPG
 import time
-from stable_baselines3.her import GoalSelectionStrategy #, HERGoalEnvWrapper
-# from stable_baselines.common.bit_flipping_env import BitFlippingEnv
-import numpy as np
 
 class DDPG_HER:
     def __init__(self, env, model_class=DDPG):
@@ -14,13 +11,13 @@ class DDPG_HER:
         self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4, goal_selection_strategy=self.goal_selection_strategy,
                         buffer_size = 1000000, batch_size = 256, gamma = .95, learning_rate = 1e-3, verbose=1,  max_episode_length=50)
 
-    def run(self, epochs=5000, train=False):
+    def run(self, train_epochs=5000, train=False):
         # print("np.array(obs).shape: ", obs.shape)
         print("observation_space: ", self.env.observation_space)
         # Train the model
         if train:
             # 1000 epochs is approximately 50,000 time steps
-            self.model.learn(total_timesteps=(50 * epochs))
+            self.model.learn(total_timesteps=(50 * train_epochs))
             self.model.save("./her_bit_env")
 
         # WARNING: you must pass an env
@@ -28,28 +25,37 @@ class DDPG_HER:
         # TODO: convert the loaded data to the proper dimensions
         self.model = HER.load('./her_bit_env', env=self.env)
 
-        # obs = self.env.reset()
         obs = self.env.get_observation_simulated()
 
-        print("OBS: ", obs)
-        success_rate = []
-        for i in range(10):
+        for i in range(1):
             obs = self.env.reset()
             score = 0
+            self.env.success_history.append(False)
+            start = time.time()
             for j in range(1000):
                 # obs needs simulated coords
                 action, _ = self.model.predict(obs)
 
                 obs, reward, done, info = self.env.step(action)
                 score += reward
-                # print(info)
-                success_rate.append(done)
+                if j != 49:
+                    self.env.success_history[-1] = done
+
+                # self.env.success_history[-1] = done
                 print("Distance history: ", self.env.distance_history[-1])
+                print("Success history: ", self.env.success_history[-1])
 
                 if done:
+                    end = time.time()
+                    self.env.time_history.append(end-start)
                     break
                 time.sleep(1)
+
                 print("epoch: ", j)
-                print("score:", score, "average score:", score / j)
-            print("success rate: ", success_rate.count(True) / len(success_rate))
+                if j != 0:
+                    print("score:", score, "average score:", score / j)
+            print("self.env.success_history[-1]: ", self.env.success_history[-1])
+            print("success rate: ", self.env.success_history.count(True) / len(self.env.success_history))
+
+        return self.env.success_history, self.env.distance_history, self.env.time_history
 
