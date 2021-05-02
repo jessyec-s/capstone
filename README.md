@@ -9,13 +9,17 @@ U of T Capstone project exploring the use of Reinforcement Learning on a physica
 3. Connect UArm to computer's USB port and plug in UArm power cord
 
 ## Run
+
+### Tasks
 To run the "find and touch task"
 Make sure both camera and robot are connected to computer and then put red object in the robot's field of view:
 
-``cd openMV``
+```
+cd openMV
+python3 threaded.py
+```
 
-``python3 threaded.py``
-
+### Tests
 To run success rate testing for the "find and touch" task:
 
 * Inside `threaded.py`:
@@ -26,9 +30,10 @@ To run success rate testing for the "find and touch" task:
    * Creates an array of random target locations within the robot's bounds  
    * You can change the number of iterations that you want to run
 
-``cd openMV``
-
-`` python3 threaded.py ``
+```
+cd openMV
+python3 threaded.py
+```
 
 ## Tips
 
