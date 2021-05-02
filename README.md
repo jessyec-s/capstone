@@ -48,3 +48,16 @@ python3 threaded.py
    * **TODO**
 4. If object cannot be recognized by the robot:
    * **TODO**
+
+## Other relevant documentation 
+
+Uarm and OpenMV:
+* [Uarm Swift Pro User Manual](http://download.ufactory.cc/docs/en/uArm%20pro%20User%20Manual%20v1.1.0.pdf)
+
+Algorithm:
+* [Stable Baselines3 HER documentation](https://stable-baselines3.readthedocs.io/en/master/modules/her.html)
+* [Stable Baselines3 DDPG documentation](https://stable-baselines3.readthedocs.io/en/master/modules/ddpg.html)
+
+APIs:
+* [UArm API](https://github.com/uArm-Developer/uArm-Python-SDK/blob/2.0/doc/api/swift_api.md)
+* [OpenMV API](https://docs.openmv.io/openmvcam/quickref.html)
