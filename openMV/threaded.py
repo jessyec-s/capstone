@@ -21,7 +21,7 @@ import threading
 from time import sleep
 from getobjectblob import blob_script
 from getobjectblob import h_angle_key
-from uarmEnv import UarmEnv, convertToCartesianRobot, convertToPolar
+from uarmEnv import UarmEnv, convertToCartesianRobot, convertToPolar, convertToCartesian
 from uarmController import UarmController
 from ddpgHer import DDPG_HER
 from gym.wrappers import TimeLimit
@@ -49,7 +49,7 @@ success_history = []
 distance_history = []
 time_history = []
 
-def main(run_tests=False) :
+def main(run_tests=False):
     '''
     Main thread:
         - starts UArm thread
@@ -174,7 +174,7 @@ def ddpg_loop_with_seek():
         uarm_controller.reset()
         uarm_env.set_object_pos(uarm_seek(uarm_controller))
         # call ddpg -- should exit when object is found
-        print("Found block")
+        print("Found block: ", uarm_env.get_object_pos())
         global distance_history, success_history, time_history
         success_history, distance_history, time_history = ddpg_her.run(train=False)
         print("Finished ddpg_her")
