@@ -12,13 +12,23 @@ U of T Capstone project exploring the use of Reinforcement Learning on a physica
 To run the "find and touch task"
 Make sure both camera and robot are connected to computer and then put red object in the robot's field of view:
 
-``cd OpenMV``
+``cd openMV``
 
-``pyhton3 threaded.py``
+``python3 threaded.py``
 
 To run success rate testing for the "find and touch" task:
 
-``TODO``
+* Inside `threaded.py`:
+   * Inside the `main` function, change `run_tests` parameter to True
+   * The test is run from inside the `ddpg_loop_no_camera` function
+   * Plots for the distance, success rate, and time for each iteration will be produced inside `openMV/plots/`
+* Inside `uarmTests.py`:
+   * Creates an array of random target locations within the robot's bounds  
+   * You can change the number of iterations that you want to run
+
+``cd openMV``
+
+`` python3 threaded.py ``
 
 ## Tips
 
