@@ -2,15 +2,11 @@ from uarm.wrapper import SwiftAPI
 import random
 import math
 import numpy as np
-
-
-MIN = 0
-MAX = 1
-RADIUS_LIMIT = (150., 300.)
-ANGLE_LIMIT = (0., 180.)
-HEIGHT_LIMIT = (0., 150.)
+from uarmEnv import RADIUS_LIMIT, ANGLE_LIMIT, HEIGHT_LIMIT, MAX, MIN
 
 OBJECT_HEIGHT = 0  # mm
+
+# Offset from camera to suction cup in mm
 CAMERA_Z_OFFSET = 37
 CAMERA_X_OFFSET = 40
 

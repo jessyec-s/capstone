@@ -1,9 +1,5 @@
-# from threaded import ddpg_loop_no_camera
 import random
-
-RADIUS_LIMIT = (150., 300.)
-ANGLE_LIMIT = (0., 180.)
-HEIGHT_LIMIT = (0., 150.)
+from uarmEnv import RADIUS_LIMIT, ANGLE_LIMIT, HEIGHT_LIMIT, MAX, MIN
 
 class UarmTests():
     def __init__(self, **kwargs):
@@ -17,7 +13,7 @@ class UarmTests():
         print("inside determine_success_rate")
         locations = []
         for i in range(num_iters):
-            locations.append([random.randrange(RADIUS_LIMIT[0], RADIUS_LIMIT[1]),
-                             random.randrange(ANGLE_LIMIT[0], ANGLE_LIMIT[1]),
-                             random.randrange(HEIGHT_LIMIT[0], HEIGHT_LIMIT[1])])
+            locations.append([random.randrange(RADIUS_LIMIT[MIN], RADIUS_LIMIT[MAX]),
+                             random.randrange(ANGLE_LIMIT[MIN], ANGLE_LIMIT[MAX]),
+                             random.randrange(HEIGHT_LIMIT[MIN], HEIGHT_LIMIT[MAX])])
         return locations

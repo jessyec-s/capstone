@@ -3,6 +3,7 @@ import gym
 from gym import spaces
 import math
 
+# UArm Environment Constants
 MIN = 0
 MAX = 1
 RADIUS_LIMIT = (150., 300.)
