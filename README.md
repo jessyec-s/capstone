@@ -34,7 +34,25 @@ To run success rate testing for the "find and touch" task:
 cd openMV
 python3 threaded.py
 ```
+### Simulations
 
+To run simulations:
+* install 'mujoco_py'
+    * Register for a year long student license [on the mujoco website](https://www.roboti.us/license.html)
+    * Follow the installation instructions on the [openai github](https://github.com/openai/mujoco-py)
+* Customize and build simulations: 
+    * The modified FetchReach model matching the robot [on this branch](https://github.com/kobinau/gym/tree/capstone)
+    * To import a custom gym branch, move into the 'gym/' directory and run: 
+``` 
+	git clone https://github.com/kobinau/gym.git
+	cd gym
+	git checkout capstone
+	pip install -e .
+```	
+    * in the 'simulations/' directory, run 'simulations.py' 
+    * can adjust train boolean for train/run, training environment and file name of trained parameters in simulation.py
+    * output file is then used for the robot
+* Additional Details on relationship between simulation and robots are found in 'simulation/README.md' 
 ## Tips
 
 1. If robot is not connecting

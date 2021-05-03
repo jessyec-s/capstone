@@ -31,22 +31,23 @@ def main() :
     '''
     Main thread:
     '''
-    ddpg_loop()
-
-def ddpg_loop():
-
-    #time.sleep(2)
+    train=True
     environment=FetchReachEnv()
+    param_file="./her_bit_env"
+    ddpg_loop(train=train,environment=environment)
+
+def ddpg_loop(train=None, environment=None, param_file="./her_bit_env"):
+    #time.sleep(2)
     environment = TimeLimit(environment, max_episode_steps=50)
     #instantiate DDPG_HER class
-    ddpg_her = DDPG_HER(env=environment)
+    ddpg_her = DDPG_HER(env=environment,name=param_file)
     local_success=[]
         
     
     print("AT TOP OF WHILE LOOP")
     # call ddpg -- should exit when object is found
     print("Found block")
-    ddpg_her.run()
+    ddpg_her.run(train=train)
     print("Finished ddpg_her")
 
 

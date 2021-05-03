@@ -10,10 +10,11 @@ import numpy as np
 import gym
 from gym.envs.robotics.fetch.reach import FetchReachEnv
 class DDPG_HER:
-    def __init__(self, env, model_class=DDPG):
+    def __init__(self, env, model_class=DDPG, name="./her_bit_env"):
         self.model_class = model_class  # works also with SAC, DDPG and TD3
         # Available strategies (cf paper): future, final, episode, random
         self.env = env
+        self.name = name
         self.goal_selection_strategy = 'future'  # equivalent to GoalSelectionStrategy.FUTURE
         self.model = HER('MlpPolicy', self.env, self.model_class, n_sampled_goal=4,
                          goal_selection_strategy=self.goal_selection_strategy,buffer_size=1000000,
@@ -24,11 +25,11 @@ class DDPG_HER:
         if train:
             # 1000 epochs is approximately 50,000 time steps
             self.model.learn(total_timesteps=(50 * epochs))
-            self.model.save("./her_bit_env")
+            self.model.save(self.name)
 
         # WARNING: you must pass an env
         # or wrap your environment with HERGoalEnvWrapper to use the predict method
-        self.model = HER.load('./her_bit_env', env=self.env)
+        self.model = HER.load(self.name, env=self.env)
 
         success_rate = []
         for i in range(100):
