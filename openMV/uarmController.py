@@ -2,15 +2,11 @@ from uarm.wrapper import SwiftAPI
 import random
 import math
 import numpy as np
-
-
-MIN = 0
-MAX = 1
-RADIUS_LIMIT = (150., 250.)
-ANGLE_LIMIT = (0., 180.)
-HEIGHT_LIMIT = (0., 150.)
+from uarmEnv import RADIUS_LIMIT, ANGLE_LIMIT, HEIGHT_LIMIT, MAX, MIN
 
 OBJECT_HEIGHT = 0  # mm
+
+# Offset from camera to suction cup in mm
 CAMERA_Z_OFFSET = 37
 CAMERA_X_OFFSET = 40
 
@@ -84,11 +80,15 @@ class UarmController(SwiftAPI):
             angle += 10
 
         # angle boundaries- may need to extend to the full range (0-180)
-        if angle > 150:
-            angle = 150
+        if angle > 170:
+            angle = 170
+            if radius+30 < RADIUS_LIMIT[MAX]:
+                radius += 30
             self.toggle_dir = True
-        elif angle < 30:
-            angle = 30
+        elif angle < 10:
+            angle = 10
+            if radius+30 < RADIUS_LIMIT[MAX]:
+                radius += 30
             self.toggle_dir = False
         self.set_polar(radius, angle, height, wait=True)
         print("--- Setting new position ---")
