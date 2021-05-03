@@ -46,8 +46,8 @@ class UarmController(SwiftAPI):
         Calculates the distance from the robot's current position (end effector) to the object.
 
         Parameters:
-            cam_h_angle (float): horizontal angle from the end effector to the object- calculated in the openMV script
-            cam_v_angle (float): vertical angle from the end effector to the object- calculated in the openMV script
+            cam_h_angle (float): horizontal angle from the end effector to the object- calculated in the openMV getobjectblob script
+            cam_v_angle (float): vertical angle from the end effector to the object- calculated in the openMV getobjectblob script
 
         Returns:
             distance: calculated distance to the object 
@@ -69,8 +69,8 @@ class UarmController(SwiftAPI):
         Calculates the coordinates of the object in space in terms of the robot's coordinate system.
 
         Parameters:
-            cam_h_angle (float): horizontal angle from the end effector to the object- calculated in the openMV script
-            cam_v_angle (float): vertical angle from the end effector to the object- calculated in the openMV script
+            cam_h_angle (float): horizontal angle from the end effector to the object- calculated in the openMV getobjectblob script
+            cam_v_angle (float): vertical angle from the end effector to the object- calculated in the openMV getobjectblob script
 
         Returns:
             [x, y, z]: current cartesian coordinates of the object 
