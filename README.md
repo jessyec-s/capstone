@@ -69,12 +69,15 @@ To run simulations:
 	ls
 	```
 	* update the constant ``port_name`` in ``threaded.py`` with your found port name
-4. If object cannot be recognized by the camera, meaning there is no white box surrounding the object when it is in view:
+3. If object cannot be recognized by the camera, meaning there is no white box surrounding the object when it is in view:
    * Open the OpenMV IDE
    * Go to Tools -> Machine Vision -> Threshold Editor
    * Click "Frame Buffer"
    * Adjust levels until the object is perfectly recognized and copy the modified threshold values (should be 6 numbers)
    * Replace the threshold values for the target object colour [here](https://github.com/jessyec-s/capstone/blob/master/physicalSystem/getobjectblob.py#L56)
+
+4. If the camera window freezes while the robot is still moving, or is green and cannot identify the object:
+   * Quit the program and try again
 
 ## Other relevant documentation 
 
