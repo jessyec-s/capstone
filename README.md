@@ -15,7 +15,7 @@ To run the "find and touch task"
 Make sure both camera and robot are connected to computer and then put red object in the robot's field of view:
 
 ```
-cd openMV
+cd physicalSystem
 python3 threaded.py
 ```
 
@@ -31,7 +31,7 @@ To run success rate testing for the "find and touch" task:
    * You can change the number of iterations that you want to run
 
 ```
-cd openMV
+cd physicalSystem
 python3 threaded.py
 ```
 ### Simulations
@@ -62,10 +62,19 @@ To run simulations:
     * Retry running ``threaded.py`` with both camera and robot connected
 
     * If the robot is getting hot this can also cause problems.  Let it cool off then retry the steps above
-2. If UArm port cannot be found:
-   * **TODO**
-4. If object cannot be recognized by the robot:
-   * **TODO**
+2. If OpenMV camera cannot connect because the port cannot be found:
+    * Print out information about your computer's ports and then identify the port in use by the camera
+    ```
+	cd /dev
+	ls
+	```
+	* update the constant ``port_name`` in ``threaded.py`` with your found port name
+4. If object cannot be recognized by the camera, meaning there is no white box surrounding the object when it is in view:
+   * Open the OpenMV IDE
+   * Go to Tools -> Machine Vision -> Threshold Editor
+   * Click "Frame Buffer"
+   * Adjust levels until the object is perfectly recognized and copy the modified threshold values (should be 6 numbers)
+   * Replace the threshold values for the target object colour [here](https://github.com/jessyec-s/capstone/blob/master/physicalSystem/getobjectblob.py#L56)
 
 ## Other relevant documentation 
 
@@ -79,3 +88,7 @@ Algorithm:
 APIs:
 * [UArm API](https://github.com/uArm-Developer/uArm-Python-SDK/blob/2.0/doc/api/swift_api.md)
 * [OpenMV API](https://docs.openmv.io/openmvcam/quickref.html)
+
+Tools:
+* [OpenMV IDE](https://openmv.io/pages/download)
+* [UArm Studio](https://www.ufactory.cc/pages/download-uarm)
