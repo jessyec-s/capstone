@@ -70,6 +70,7 @@ To run simulations:
 	```
 	* update the constant ``port_name`` in ``threaded.py`` with your found port name
 4. If object cannot be recognized by the camera, meaning there is no white box surrounding the object when it is in view:
+   * Open the OpenMV IDE
    * Go to Tools -> Machine Vision -> Threshold Editor
    * Click "Frame Buffer"
    * Adjust levels until the object is perfectly recognized and copy the modified threshold values (should be 6 numbers)
@@ -87,3 +88,7 @@ Algorithm:
 APIs:
 * [UArm API](https://github.com/uArm-Developer/uArm-Python-SDK/blob/2.0/doc/api/swift_api.md)
 * [OpenMV API](https://docs.openmv.io/openmvcam/quickref.html)
+
+Tools:
+* [OpenMV IDE](https://openmv.io/pages/download)
+* [UArm Studio](https://www.ufactory.cc/pages/download-uarm)
