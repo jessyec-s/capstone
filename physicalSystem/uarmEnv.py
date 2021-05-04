@@ -409,6 +409,21 @@ class UarmEnv(gym.GoalEnv):
 
         return simulated_obs
 
+    def get_object_pos(self):
+        """
+        Returns the object's position.    
+        """
+        return self.object_pos
+
+    def set_object_pos(self, pos):
+        """
+        Sets the object's position.
+
+        Parameters:
+            pos (array): current position of the object   
+        """
+        self.object_pos = pos
+
     def goal_distance(self, achieved_goal, desired_goal):
         """
         Computes the distance between the desired goal and the achieved goal.
