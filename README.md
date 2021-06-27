@@ -24,8 +24,8 @@ To run success rate testing for the "find and touch" task:
 
 * Inside `threaded.py`:
    * Inside the `main` function, change `run_tests` parameter to True
-   * The test is run from inside the `ddpg_loop_no_camera` function
-   * Plots for the distance, success rate, and time for each iteration will be produced inside `openMV/plots/`
+   * The test is run from inside the `find_and_touch_test_loop` function
+   * Plots for the distance, success rate, and time for each iteration will be produced in your current directory in a folder named `/plots`
 * Inside `uarmTests.py`:
    * Creates an array of random target locations within the robot's bounds  
    * You can change the number of iterations that you want to run
