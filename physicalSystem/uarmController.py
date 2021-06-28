@@ -84,11 +84,12 @@ class UarmController(SwiftAPI):
         if coord is None:
             print("Error getting robot's position")
             return
-
+	# Below the angles are converted from the simulation units to physical units
         rel_z = coord[2] - OBJECT_HEIGHT + CAMERA_Z_OFFSET
         y = rel_z * math.tan(cam_h_angle * math.pi / 180)
         x = rel_z * math.tan(cam_v_angle * math.pi / 180) + CAMERA_X_OFFSET
-
+	# Now we must correct the physical coordinates in case the camera is on an angle relative to the coordinate system 
+	# of the Uarm. 
         y_real = y*math.sin(arm_angle_y * math.pi / 180) + x*math.sin(arm_angle_x * math.pi / 180) + coord[1]
         x_real = y*math.cos(arm_angle_y * math.pi / 180) + x*math.cos(arm_angle_x * math.pi / 180) + coord[0]
 

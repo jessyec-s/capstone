@@ -41,8 +41,8 @@ Object is located via camera. Location of the arm is found relative to the end e
 #### camera object identification:
 * object is found in downward facing camera. Given the cameras horizontal and vertical fields of view (FOV), and the centroid of the object, the horizontal and vertical angles the object makes with the centre of the camera are known. 
 * Since the height of the camera is known ( position of the end effector + vertical offset of the camera), we can use angle formulas to find the position of the object relative to the centre of the camera. 
-* The camera may be at an angle so the determined xy coordinates of the object must be converted to the global x-y coordinates of the robot found [here]()
+* The camera may be at an angle so the determined xy coordinates of the object must be converted to the global x-y coordinates of the robot found [here](https://github.com/jessyec-s/capstone/blob/d68466537a0ac814c729c744323ef835718a5110/physicalSystem/uarmController.py#L92)
 #### camera to end effector:
-* hardcoded vector from physical measurements, you will need to measure when assembling and modify the code (here)[]
+* hardcoded vector from physical measurements, you will need to measure when assembling and modify the code [here](https://github.com/jessyec-s/capstone/blob/d68466537a0ac814c729c744323ef835718a5110/physicalSystem/uarmController.py#L11)
 #### position of the end effector:
-* can be found using the [Uarm API]()
+* can be found using the [Uarm API](https://github.com/uArm-Developer/uArm-Python-SDK/tree/2.0/uarm/swift). The subclass which inherits the Uarm commands is found in physicalSystem/uarmController.py.
